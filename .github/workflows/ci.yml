@@ -25,21 +25,15 @@ jobs:
     - name: Checkout security
       uses: actions/checkout@v2
 
-    - name: Cache Gradle packages
-      uses: actions/cache@v2
+    - uses: gradle/gradle-build-action@v2
       with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+        arguments: clean build -Dbuild.snapshot=false -x test
 
-    - name: Package
-      run: ./gradlew clean build -Dbuild.snapshot=false -x test
-
-    - name: Test
-      run: OPENDISTRO_SECURITY_TEST_OPENSSL_OPT=true ./gradlew test
+    - uses: gradle/gradle-build-action@v2
+      env:
+        OPENDISTRO_SECURITY_TEST_OPENSSL_OPT: true
+      with:
+        arguments: test
 
     - name: Coverage
       uses: codecov/codecov-action@v1

@@ -37,11 +37,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.opensearch.security.auditlog.config.AuditConfig;
-import org.opensearch.security.securityconf.impl.CType;
-import org.opensearch.security.securityconf.impl.Meta;
-import org.opensearch.security.securityconf.impl.NodesDn;
-import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
-import org.opensearch.security.securityconf.impl.WhitelistingSettings;
+import org.opensearch.security.securityconf.impl.*;
 import org.opensearch.security.securityconf.impl.v6.*;
 import org.opensearch.security.securityconf.impl.v7.*;
 import org.opensearch.common.Strings;
@@ -154,6 +150,19 @@ public class Migration {
 
         for(final Entry<String, WhitelistingSettings> entry: whitelistingSetting.getCEntries().entrySet()) {
             migrated.putCEntry(entry.getKey(), new WhitelistingSettings(entry.getValue()));
+        }
+        return migrated;
+    }
+
+    public static SecurityDynamicConfiguration<AllowlistingSettings> migrateAllowlistingSetting(SecurityDynamicConfiguration<AllowlistingSettings> allowlistingSetting) {
+        final SecurityDynamicConfiguration<AllowlistingSettings> migrated = SecurityDynamicConfiguration.empty();
+        migrated.setCType(allowlistingSetting.getCType());
+        migrated.set_meta(new Meta());
+        migrated.get_meta().setConfig_version(2);
+        migrated.get_meta().setType("whitelist");
+
+        for(final Entry<String, AllowlistingSettings> entry: allowlistingSetting.getCEntries().entrySet()) {
+            migrated.putCEntry(entry.getKey(), new AllowlistingSettings(entry.getValue()));
         }
         return migrated;
     }

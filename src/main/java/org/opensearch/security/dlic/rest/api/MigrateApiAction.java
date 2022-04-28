@@ -20,7 +20,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
-import org.opensearch.security.securityconf.impl.*;
 import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.Version;
 import org.opensearch.LegacyESVersion;
@@ -52,6 +51,11 @@ import org.opensearch.security.dlic.rest.validation.AbstractConfigurationValidat
 import org.opensearch.security.dlic.rest.validation.NoOpValidator;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.securityconf.Migration;
+import org.opensearch.security.securityconf.impl.AllowlistingSettings;
+import org.opensearch.security.securityconf.impl.CType;
+import org.opensearch.security.securityconf.impl.NodesDn;
+import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
+import org.opensearch.security.securityconf.impl.WhitelistingSettings;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.threadpool.ThreadPool;
 

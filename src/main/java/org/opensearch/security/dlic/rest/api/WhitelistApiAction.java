@@ -45,7 +45,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
+import static org.opensearch.security.dlic.rest.support.Utils.addDeprecatedRoutesPrefix;
 
 /**
  * This class implements GET and PUT operations to manage dynamic WhitelistingSettings.
@@ -88,10 +88,10 @@ import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
  * <p>
  */
 public class WhitelistApiAction extends PatchableResourceApiAction {
-    private static final List<Route> routes = addRoutesPrefix(ImmutableList.of(
-            new Route(RestRequest.Method.GET, "/whitelist"),
-            new Route(RestRequest.Method.PUT, "/whitelist"),
-            new Route(RestRequest.Method.PATCH, "/whitelist")
+    private static final List<DeprecatedRoute> routes = addDeprecatedRoutesPrefix(ImmutableList.of(
+            new DeprecatedRoute(RestRequest.Method.GET, "/whitelist", "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead."),
+            new DeprecatedRoute(RestRequest.Method.PUT, "/whitelist", "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead."),
+            new DeprecatedRoute(RestRequest.Method.PATCH, "/whitelist", "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead.")
     ));
 
     private static final String name = "config";
@@ -154,7 +154,7 @@ public class WhitelistApiAction extends PatchableResourceApiAction {
 
 
     @Override
-    public List<Route> routes() {
+    public List<DeprecatedRoute> deprecatedRoutes() {
         return routes;
     }
 

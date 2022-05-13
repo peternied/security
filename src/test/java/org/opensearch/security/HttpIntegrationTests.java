@@ -38,7 +38,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.message.BasicHeader;
-import org.checkerframework.checker.units.qual.C;
 import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest.AliasActions;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;

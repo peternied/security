@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 
-import org.checkerframework.checker.units.qual.C;
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.cluster.health.ClusterHealthStatus;
 import org.opensearch.common.io.stream.StreamInput;

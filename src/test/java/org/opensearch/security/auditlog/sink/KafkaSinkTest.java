@@ -18,6 +18,7 @@ package org.opensearch.security.auditlog.sink;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.Random;
 
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -30,8 +31,6 @@ import org.opensearch.security.auditlog.helper.MockAuditMessageFactory;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.springframework.kafka.test.rule.EmbeddedKafkaRule;
-
-import scala.util.Random;
 
 import org.opensearch.security.auditlog.AbstractAuditlogiUnitTest;
 

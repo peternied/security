@@ -170,6 +170,7 @@ public abstract class AbstractSecurityUnitTest {
     }
 
     protected void initialize(ClusterHelper clusterHelper, ClusterInfo clusterInfo, DynamicSecurityConfig securityConfig) throws IOException {
+        
         try (Client tc = clusterHelper.nodeClient()) {
             Assert.assertEquals(clusterInfo.numNodes,
                     tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());

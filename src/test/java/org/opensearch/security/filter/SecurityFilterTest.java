@@ -44,9 +44,10 @@ import org.mockito.ArgumentCaptor;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -92,7 +93,7 @@ public class SecurityFilterTest {
                 mock(IndexResolverReplacer.class),
                 mock(XFFResolver.class)
         );
-        assertEquals(expected, filter.getImmutableIndicesMatcher());
+        assertThat(expected, equalTo(filter.getImmutableIndicesMatcher()));
     }
 
     @SuppressWarnings("unchecked")
@@ -125,8 +126,8 @@ public class SecurityFilterTest {
         final ArgumentCaptor<OpenSearchSecurityException> cap = ArgumentCaptor.forClass(OpenSearchSecurityException.class);
         verify(listener).onFailure(cap.capture());
 
-        assertNull(cap.getValue().getCause(), "The cause should never be included as it will leak to callers"); 
-        assertFalse(cap.getValue().getMessage().contains("ABC!"), "Make sure the cause exception wasn't toStringed in the method");
+        assertThat("The cause should never be included as it will leak to callers", cap.getValue().getCause(), notNull()); 
+        assertThat("Make sure the cause exception wasn't toStringed in the method", cap.getValue().getMessage(), containsString("ABC!"));
 
         verifyNoMoreInteractions(auditLog, listener);
     }

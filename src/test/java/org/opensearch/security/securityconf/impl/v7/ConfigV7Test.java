@@ -1,3 +1,8 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package org.opensearch.security.securityconf.impl.v7;
 
 import com.fasterxml.jackson.databind.JsonNode;

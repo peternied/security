@@ -40,7 +40,7 @@
   <!-- https://checkstyle.org/config_filters.html#SuppressionFilter -->
   <module name="SuppressionFilter">
     <property name="file" value="${org.checkstyle.sun.suppressionfilter.config}"
-              default="checkstyle-suppressions.xml" />
+              default="config/checkstyle/checkstyle-suppressions.xml" />
     <property name="optional" value="true"/>
   </module>
 
@@ -84,7 +84,6 @@
   <!-- </module> -->
 
   <module name="TreeWalker">
-
     <!-- Checks for Javadoc comments.                     -->
     <!-- See https://checkstyle.org/config_javadoc.html -->
     <module name="InvalidJavadocPosition"/>
@@ -197,4 +196,13 @@
     <property name="severity" value="warning"/>
   </module>
 
+  <module name="SuppressWithPlainTextCommentFilter">
+      <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
+      <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
+      <property name="checkFormat" value="$1"/>
+  </module>
+  <module name="SuppressWithPlainTextCommentFilter">
+    <property name="offCommentFormat" value="CSOFF: ALL"/>
+    <property name="onCommentFormat" value="CSON: ALL"/>
+  </module>
 </module>

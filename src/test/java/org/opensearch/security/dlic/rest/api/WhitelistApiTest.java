@@ -15,7 +15,7 @@
 
 package org.opensearch.security.dlic.rest.api;
 
-
+//CSOFF: ALL Ignoring legacy non-inclusive terms
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.auditlog.impl.AuditMessage;

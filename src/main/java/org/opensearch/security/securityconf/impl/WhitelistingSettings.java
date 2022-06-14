@@ -15,6 +15,7 @@
 
 package org.opensearch.security.securityconf.impl;
 
+//CSOFF: ALL Ignoring legacy non-inclusive terms
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestChannel;

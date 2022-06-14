@@ -13,7 +13,7 @@
  *  permissions and limitations under the License.
  */
 
-
+//CSOFF: ALL Ignoring legacy non-inclusive terms
 package org.opensearch.security.dlic.rest.api;
 
 import org.opensearch.security.DefaultObjectMapper;

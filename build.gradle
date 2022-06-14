@@ -160,6 +160,17 @@ tasks.withType(Checkstyle) {
     }
 }
 
+licenseHeaders.enabled = true
+
+dependencyLicenses.enabled = false
+thirdPartyAudit.enabled = false
+loggerUsageCheck.enabled = false
+forbiddenApisMain.enabled = false
+forbiddenApisTest.enabled = false
+filepermissions.enabled = false
+forbiddenPatterns.enabled = false
+testingConventions.enabled = false
+
 allprojects {
     tasks.withType(Javadoc).all { enabled = false }
 }

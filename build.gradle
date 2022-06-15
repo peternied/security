@@ -150,7 +150,7 @@ test {
 }
 
 checkstyle {
-    configFile file("config/checkstyle/sun_checks.xml")
+    configFile file("checkstyle/sun_checks.xml")
 }
 
 tasks.withType(Checkstyle) {
@@ -173,4 +173,16 @@ testingConventions.enabled = false
 
 allprojects {
     tasks.withType(Javadoc).all { enabled = false }
+}
+
+bundlePlugin {
+    from('plugin-security.policy') {
+        into "."
+    }
+    from('config') {
+        into "config"
+    }
+    from('tools') {
+        into "tools"
+    }
 }

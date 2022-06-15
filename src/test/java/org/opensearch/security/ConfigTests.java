@@ -116,7 +116,8 @@ public class ConfigTests {
     }
     
     private SecurityDynamicConfiguration<?> load(String file, CType cType) throws Exception {
-        JsonNode jsonNode = YAML.readTree(FileUtils.readFileToString(new File(file), "UTF-8"));
+        final String adjustedFilePath = "../../resources/test/" + file;
+        JsonNode jsonNode = YAML.readTree(FileUtils.readFileToString(new File(adjustedFilePath), "UTF-8"));
         int configVersion = 1;
 
         System.out.println("%%%%%%%% THIS IS A LINE OF INTEREST LOAD: CONFIG VERSION: %%%%%%%");

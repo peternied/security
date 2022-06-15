@@ -973,6 +973,11 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader  {
                     public long getValueCount() {
                         return sortedSetDocValues.getValueCount();
                     }
+
+                    @Override
+                    public long docValueCount() {
+                        return sortedSetDocValues.docValueCount();
+                    }
                 };
             }
         }

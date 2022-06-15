@@ -212,4 +212,9 @@
     <property name="severity" value="error"/>
   </module>
 
+  <module name="SuppressWithPlainTextCommentFilter">
+    <property name="offCommentFormat" value="CSOFF: ALL"/>
+    <property name="onCommentFormat" value="CSON: ALL"/>
+  </module>
+
 </module>

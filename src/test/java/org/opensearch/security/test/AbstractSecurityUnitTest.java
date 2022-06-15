@@ -39,7 +39,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.net.ssl.SSLContext;
 
 import com.carrotsearch.randomizedtesting.RandomizedTest;
-import com.carrotsearch.randomizedtesting.annotations.ThreadLeakLingering;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import io.netty.handler.ssl.OpenSsl;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
@@ -80,7 +81,7 @@ import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import org.opensearch.security.test.helper.rules.SecurityTestWatcher;
 import org.opensearch.threadpool.ThreadPool;
 
-@ThreadLeakLingering(linger = 1000)
+@ThreadLeakScope(Scope.NONE)
 public abstract class AbstractSecurityUnitTest extends RandomizedTest {
 
     protected static final AtomicLong num = new AtomicLong();

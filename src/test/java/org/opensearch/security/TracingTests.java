@@ -26,8 +26,6 @@
 
 package org.opensearch.security;
 
-import java.lang.Thread.UncaughtExceptionHandler;
-
 import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Ignore;

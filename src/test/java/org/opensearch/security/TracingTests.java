@@ -239,16 +239,6 @@ public class TracingTests extends SingleClusterTest {
 
     @Test
     public void testHTTPSingle() throws Exception {
-
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                e.printStackTrace();
-
-            }
-        });
-
     final Settings settings = Settings.builder()
             .putList(ConfigConstants.SECURITY_AUTHCZ_REST_IMPERSONATION_USERS+".worf", "knuddel","nonexists")
             .build();
@@ -305,16 +295,6 @@ public class TracingTests extends SingleClusterTest {
 
     @Test
     public void testSearchScroll() throws Exception {
-
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                e.printStackTrace();
-
-            }
-        });
-
     final Settings settings = Settings.builder()
             .putList(ConfigConstants.SECURITY_AUTHCZ_REST_IMPERSONATION_USERS+".worf", "knuddel","nonexists")
             .build();

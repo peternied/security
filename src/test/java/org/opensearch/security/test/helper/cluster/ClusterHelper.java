@@ -61,6 +61,7 @@ import org.opensearch.http.HttpInfo;
 import org.opensearch.node.Node;
 import org.opensearch.node.PluginAwareNode;
 import org.opensearch.security.test.NodeSettingsSupplier;
+import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.cluster.ClusterConfiguration.NodeSettings;
 import org.opensearch.security.test.helper.network.SocketUtils;
 import org.opensearch.transport.TransportInfo;
@@ -69,7 +70,7 @@ public final class ClusterHelper {
 
     static {
         System.setProperty("opensearch.enforce.bootstrap.checks", "true");
-        System.setProperty("security.default_init.dir", new File("./securityconfig").getAbsolutePath());
+        System.setProperty("security.default_init.dir", new File( SingleClusterTest.PROJECT_ROOT_RELATIVE_PATH + "config").getAbsolutePath());
     }
 
     protected final Logger log = LogManager.getLogger(ClusterHelper.class);

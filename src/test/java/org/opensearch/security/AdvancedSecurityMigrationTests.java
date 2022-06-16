@@ -31,12 +31,12 @@ public class AdvancedSecurityMigrationTests extends SingleClusterTest {
 
     @Before
     public void setupBefore() {
-        System.setProperty("security.default_init.dir", new File("./src/test/resources/security_passive").getAbsolutePath());
+        System.setProperty("security.default_init.dir", new File(TEST_RESOURCE_RELATIVE_PATH + "security_passive").getAbsolutePath());
     }
 
     @After
     public void cleanupAfter() {
-        System.setProperty("security.default_init.dir", new File("./securityconfig").getAbsolutePath());
+        System.setProperty("security.default_init.dir", new File("config").getAbsolutePath());
     }
 
     /**

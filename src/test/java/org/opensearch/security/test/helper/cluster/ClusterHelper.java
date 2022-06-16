@@ -26,6 +26,7 @@
 
 package org.opensearch.security.test.helper.cluster;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Comparator;
@@ -69,8 +70,23 @@ import org.opensearch.transport.TransportInfo;
 public final class ClusterHelper {
 
     static {
+        resetSystemProperties();
+    }
+    
+    /** Resets all system properties associated with a cluster */
+    public static void resetSystemProperties() {
         System.setProperty("opensearch.enforce.bootstrap.checks", "true");
-        System.setProperty("security.default_init.dir", new File( SingleClusterTest.PROJECT_ROOT_RELATIVE_PATH + "config").getAbsolutePath());
+        updateDefaultDirectory(new File( SingleClusterTest.PROJECT_ROOT_RELATIVE_PATH + "config").getAbsolutePath());
+    }
+
+    /**
+     * Update the default directory used by the security plugin
+     * NOTE: this setting is system wide, use ClusterHelper.resetSystemProperties() to restore the original state
+     * 
+     * @return the previous value if one was set, otherwise null
+     */
+    public static String updateDefaultDirectory(final String newValue) {
+        return System.setProperty("security.default_init.dir", newValue);
     }
 
     protected final Logger log = LogManager.getLogger(ClusterHelper.class);

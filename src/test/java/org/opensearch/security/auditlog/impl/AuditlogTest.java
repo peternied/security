@@ -53,9 +53,9 @@ public class AuditlogTest {
                 .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_TRANSPORT_CATEGORIES, "NONE")
                 .build();
         AbstractAuditLog al = AuditTestUtils.createAuditLog(settings, null, null, AbstractSecurityUnitTest.MOCK_POOL, null, cs);
-        TestAuditlogImpl.clear();
-        al.logGrantedPrivileges("indices:data/read/search", new ClusterHealthRequest(), null);
-        Assert.assertEquals(1, TestAuditlogImpl.messages.size());
+        TestAuditlogImpl.doThenWaitForMessage(() -> {
+           al.logGrantedPrivileges("indices:data/read/search", new ClusterHealthRequest(), null);
+        });
     }
 
     @Test
@@ -69,9 +69,9 @@ public class AuditlogTest {
                 .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_TRANSPORT_CATEGORIES, "NONE")
                 .build();
         AbstractAuditLog al = AuditTestUtils.createAuditLog(settings, null,  null, AbstractSecurityUnitTest.MOCK_POOL, null, cs);
-        TestAuditlogImpl.clear();
-        al.logGrantedPrivileges("indices:data/read/search", sr, null);
-        Assert.assertEquals(1, TestAuditlogImpl.messages.size());
+        TestAuditlogImpl.doThenWaitForMessage(() -> {
+            al.logGrantedPrivileges("indices:data/read/search", sr, null);
+        });
     }
 
     @Test
@@ -84,11 +84,10 @@ public class AuditlogTest {
                 .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_RESOLVE_BULK_REQUESTS, true)
                 .build();
         AbstractAuditLog al = AuditTestUtils.createAuditLog(settings, null,  null, AbstractSecurityUnitTest.MOCK_POOL, null, cs);
-        TestAuditlogImpl.clear();
-        al.logSSLException(null, new Exception("test rest"));
-        al.logSSLException(null, new Exception("test rest"), null, null);
-        System.out.println(TestAuditlogImpl.sb.toString());
-        Assert.assertEquals(2, TestAuditlogImpl.messages.size());
+        TestAuditlogImpl.doThenWaitForMessages(() -> {
+            al.logSSLException(null, new Exception("test rest"));
+            al.logSSLException(null, new Exception("test rest"), null, null);
+        }, 2);
     }
 
     @Test

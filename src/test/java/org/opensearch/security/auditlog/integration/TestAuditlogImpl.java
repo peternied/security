@@ -69,7 +69,7 @@ public class TestAuditlogImpl extends AuditLogSink {
         
         try {
             action.run();
-            final int maxSecondsToWaitForMessages = 1; 
+            final int maxSecondsToWaitForMessages = 5;
             final boolean foundAll = latch.await(maxSecondsToWaitForMessages, TimeUnit.SECONDS);
             if (!foundAll) {
                 throw new MessagesNotFoundException(expectedCount, messages);

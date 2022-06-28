@@ -38,6 +38,7 @@ public class TestAuditlogImpl extends AuditLogSink {
     }
 
     public synchronized boolean doStore(AuditMessage msg) {
+        System.out.println("TestAuditlogImpl.doStore recieved message from node: " + msg.getNodeId() + ", privilege: " + msg.getPrivilege());
         if (messagesRef.get() == null || countDownRef.get() == null) {
             // Ignore any messages that are sent before TestAuditlogImpl is waiting.
             return true;

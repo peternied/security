@@ -112,11 +112,11 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         updateAuditConfig(AuditTestUtils.createAuditPayload(auditConfig));
 
         System.out.println(rh.executeGetRequest("_cat/nodes?v"));
-        System.out.println(rh.executeGetRequest("_cat/shards?v"));
 
         // make an event happen
         final List<AuditMessage> messages = TestAuditlogImpl.doThenWaitForMessages(() -> {
             rh.executePutRequest("emp/_doc/0?refresh", "{\"Designation\" : \"CEO\", \"Gender\" : \"female\", \"Salary\" : 100}");
+            System.out.println(rh.executeGetRequest("_cat/shards?v"));
         }, 7);
 
         System.out.println(TestAuditlogImpl.sb.toString());

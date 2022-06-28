@@ -111,6 +111,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         AuditConfig auditConfig = new AuditConfig(true, AuditConfig.Filter.DEFAULT , ComplianceConfig.from(ImmutableMap.of("enabled", true, "write_watched_indices", Collections.singletonList("emp")), additionalSettings));
         updateAuditConfig(AuditTestUtils.createAuditPayload(auditConfig));
 
+        System.out.println(rh.executeGetRequest("_cat/nodes?v"));
         System.out.println(rh.executeGetRequest("_cat/shards?v"));
 
         // make an event happen

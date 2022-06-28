@@ -43,6 +43,7 @@ import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.AnyOf.anyOf;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThrows;
 
@@ -111,29 +112,27 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         AuditConfig auditConfig = new AuditConfig(true, AuditConfig.Filter.DEFAULT , ComplianceConfig.from(ImmutableMap.of("enabled", true, "write_watched_indices", Collections.singletonList("emp")), additionalSettings));
         updateAuditConfig(AuditTestUtils.createAuditPayload(auditConfig));
 
-        System.out.println(rh.executeGetRequest("_cat/nodes?v"));
-
         // make an event happen
-        final List<AuditMessage> messages = TestAuditlogImpl.doThenWaitForMessages(() -> {
-            rh.executePutRequest("emp/_doc/0?refresh", "{\"Designation\" : \"CEO\", \"Gender\" : \"female\", \"Salary\" : 100}");
-            System.out.println(rh.executeGetRequest("_cat/shards?v"));
-        }, 7);
+        List<AuditMessage> messages;
+        try {
+            messages = TestAuditlogImpl.doThenWaitForMessages(() -> {
+                rh.executePutRequest("emp/_doc/0?refresh", "{\"Designation\" : \"CEO\", \"Gender\" : \"female\", \"Salary\" : 100}");
+                System.out.println(rh.executeGetRequest("_cat/shards?v"));
+            }, 7);
+        }  catch (final MessagesNotFoundException ex) {
+            // indices:admin/mapping/auto_put can be logged twice, this handles if they were not found
+            assertThat("Too many missing audit log messages", ex.getMissingCount(), equalTo(2));
+            messages = ex.getFoundMessages();
+        }
 
-        System.out.println(TestAuditlogImpl.sb.toString());
+        messages.stream().filter(msg -> msg.getCategory().equals(AuditCategory.COMPLIANCE_DOC_WRITE))
+            .findFirst().orElseThrow(() -> new RuntimeException("Missing COMPLIANCE message"));
 
-        final String allCategories = messages.stream().map(AuditMessage::getCategory).map(AuditCategory::name).collect(Collectors.joining(", "));
-        System.out.println("Categories " + allCategories);
-        messages.stream().filter(msg -> msg.getCategory().equals(AuditCategory.COMPLIANCE_DOC_WRITE)).findFirst().orElseThrow(() -> new RuntimeException("Missing COMPLIANCE message"));
+        final List<AuditMessage> indexCreation = messages.stream().filter(msg -> "indices:admin/auto_create".equals(msg.getPrivilege())).collect(Collectors.toList());
+        assertThat(indexCreation.size(), equalTo(2));
 
-        final String allPrivileges = messages.stream().map(AuditMessage::getPrivilege).collect(Collectors.joining(", "));
-        System.out.println("Privileges " + allPrivileges);
-
-        final List<AuditMessage> autoCreateMessages = messages.stream().filter(msg -> "indices:admin/auto_create".equals(msg.getPrivilege())).collect(Collectors.toList());
-        assertThat(autoCreateMessages.size(), equalTo(2));
-
-        autoCreateMessages.stream().filter(msg -> msg.toString().contains("_system_index_access_allowed")).findFirst().orElseThrow(() -> new RuntimeException("Missing system access allowed message"));
-        final List<AuditMessage> autoPutMessages = messages.stream().filter(msg -> "indices:admin/mapping/auto_put".equals(msg.getPrivilege())).collect(Collectors.toList());
-        assertThat(autoPutMessages.size(), equalTo(4));
+        final List<AuditMessage> mappingCreation = messages.stream().filter(msg -> "indices:admin/mapping/auto_put".equals(msg.getPrivilege())).collect(Collectors.toList());
+        assertThat(mappingCreation.size(), anyOf(equalTo(4), equalTo(2)));
        
         // disable compliance
         auditConfig = new AuditConfig(true, AuditConfig.Filter.DEFAULT , ComplianceConfig.from(ImmutableMap.of("enabled", false, "write_watched_indices", Collections.singletonList("emp")), additionalSettings));

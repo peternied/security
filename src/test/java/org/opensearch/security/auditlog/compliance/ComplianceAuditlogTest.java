@@ -49,7 +49,7 @@ import static org.junit.Assert.assertThrows;
 
 public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
 
-    // @Test
+    @Test
     public void testSourceFilter() throws Exception {
         Settings additionalSettings = Settings.builder()
                 .put("plugins.security.audit.type", TestAuditlogImpl.class.getName())
@@ -147,7 +147,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         assertThat(ex.getMissingCount(), equalTo(1));
     }
 
-    // @Test
+    @Test
     public void testSourceFilterMsearch() throws Exception {
 
         Settings additionalSettings = Settings.builder()
@@ -213,7 +213,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    // @Test
+    @Test
     public void testInternalConfig() throws Exception {
 
         Settings additionalSettings = Settings.builder()
@@ -262,7 +262,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    // @Test
+    @Test
     public void testExternalConfig() throws Exception {
 
         final Settings additionalSettings = Settings.builder()
@@ -299,7 +299,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    // @Test
+    @Test
     public void testUpdate() throws Exception {
 
         Settings additionalSettings = Settings.builder()
@@ -347,7 +347,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    // @Test
+    @Test
     public void testWriteHistory() throws Exception {
 
         Settings additionalSettings = Settings.builder()

@@ -38,7 +38,6 @@ public class TestAuditlogImpl extends AuditLogSink {
     }
 
     public synchronized boolean doStore(AuditMessage msg) {
-        System.out.println("TestAuditlogImpl.doStore recieved message from node: " + msg.getNodeId() + ", privilege: " + msg.getPrivilege());
         if (messagesRef.get() == null || countDownRef.get() == null) {
             // Ignore any messages that are sent before TestAuditlogImpl is waiting.
             return true;
@@ -69,7 +68,7 @@ public class TestAuditlogImpl extends AuditLogSink {
         
         try {
             action.run();
-            final int maxSecondsToWaitForMessages = 5;
+            final int maxSecondsToWaitForMessages = 1;
             final boolean foundAll = latch.await(maxSecondsToWaitForMessages, TimeUnit.SECONDS);
             if (!foundAll) {
                 throw new MessagesNotFoundException(expectedCount, messages);

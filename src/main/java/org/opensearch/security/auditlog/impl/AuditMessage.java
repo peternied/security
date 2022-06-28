@@ -445,10 +445,6 @@ public final class AuditMessage {
         return (String) this.auditInfo.get(PRIVILEGE);
     }
 
-    public String getNodeId() {
-        return (String) this.auditInfo.get(NODE_ID);
-    }
-
     public String getExceptionStackTrace() {
         return (String) this.auditInfo.get(EXCEPTION);
     }

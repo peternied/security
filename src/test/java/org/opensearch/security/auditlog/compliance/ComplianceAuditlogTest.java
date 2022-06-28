@@ -14,6 +14,7 @@ package org.opensearch.security.auditlog.compliance;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.http.Header;
@@ -32,6 +33,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.security.auditlog.AbstractAuditlogiUnitTest;
 import org.opensearch.security.auditlog.AuditTestUtils;
 import org.opensearch.security.auditlog.config.AuditConfig;
+import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.auditlog.integration.TestAuditlogImpl;
 import org.opensearch.security.auditlog.integration.TestAuditlogImpl.MessagesNotFoundException;
@@ -43,11 +45,10 @@ import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
 
-    @Test
+    // @Test
     public void testSourceFilter() throws Exception {
         Settings additionalSettings = Settings.builder()
                 .put("plugins.security.audit.type", TestAuditlogImpl.class.getName())
@@ -110,11 +111,29 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         AuditConfig auditConfig = new AuditConfig(true, AuditConfig.Filter.DEFAULT , ComplianceConfig.from(ImmutableMap.of("enabled", true, "write_watched_indices", Collections.singletonList("emp")), additionalSettings));
         updateAuditConfig(AuditTestUtils.createAuditPayload(auditConfig));
 
+        System.out.println(rh.executeGetRequest("_cat/shards?v"));
+
         // make an event happen
-        TestAuditlogImpl.doThenWaitForMessages(() -> {
+        final List<AuditMessage> messages = TestAuditlogImpl.doThenWaitForMessages(() -> {
             rh.executePutRequest("emp/_doc/0?refresh", "{\"Designation\" : \"CEO\", \"Gender\" : \"female\", \"Salary\" : 100}");
         }, 7);
-        assertTrue(TestAuditlogImpl.messages.toString().contains("COMPLIANCE_DOC_WRITE"));
+
+        System.out.println(TestAuditlogImpl.sb.toString());
+
+        final String allCategories = messages.stream().map(AuditMessage::getCategory).map(AuditCategory::name).collect(Collectors.joining(", "));
+        System.out.println("Categories " + allCategories);
+        messages.stream().filter(msg -> msg.getCategory().equals(AuditCategory.COMPLIANCE_DOC_WRITE)).findFirst().orElseThrow(() -> new RuntimeException("Missing COMPLIANCE message"));
+
+        final String allPrivileges = messages.stream().map(AuditMessage::getPrivilege).collect(Collectors.joining(", "));
+        System.out.println("Privileges " + allPrivileges);
+
+        final List<AuditMessage> autoCreateMessages = messages.stream().filter(msg -> "indices:admin/auto_create".equals(msg.getPrivilege())).collect(Collectors.toList());
+        assertThat(autoCreateMessages.size(), equalTo(2));
+
+        autoCreateMessages.stream().filter(msg -> msg.toString().contains("_system_index_access_allowed")).findFirst().orElseThrow(() -> new RuntimeException("Missing system access allowed message"));
+        final List<AuditMessage> autoPutMessages = messages.stream().filter(msg -> "indices:admin/mapping/auto_put".equals(msg.getPrivilege())).collect(Collectors.toList());
+        assertThat(autoPutMessages.size(), equalTo(4));
+       
         // disable compliance
         auditConfig = new AuditConfig(true, AuditConfig.Filter.DEFAULT , ComplianceConfig.from(ImmutableMap.of("enabled", false, "write_watched_indices", Collections.singletonList("emp")), additionalSettings));
         updateAuditConfig(AuditTestUtils.createAuditPayload(auditConfig));
@@ -128,7 +147,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         assertThat(ex.getMissingCount(), equalTo(1));
     }
 
-    @Test
+    // @Test
     public void testSourceFilterMsearch() throws Exception {
 
         Settings additionalSettings = Settings.builder()
@@ -194,7 +213,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    @Test
+    // @Test
     public void testInternalConfig() throws Exception {
 
         Settings additionalSettings = Settings.builder()
@@ -243,7 +262,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    @Test
+    // @Test
     public void testExternalConfig() throws Exception {
 
         final Settings additionalSettings = Settings.builder()
@@ -280,7 +299,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    @Test
+    // @Test
     public void testUpdate() throws Exception {
 
         Settings additionalSettings = Settings.builder()
@@ -328,7 +347,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(validateMsgs(TestAuditlogImpl.messages));
     }
 
-    @Test
+    // @Test
     public void testWriteHistory() throws Exception {
 
         Settings additionalSettings = Settings.builder()

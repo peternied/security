@@ -82,8 +82,6 @@ forbiddenApisTest.enabled = false
 filepermissions.enabled = false
 forbiddenPatterns.enabled = false
 testingConventions.enabled = false
-// Conflicts between runtime kafka-clients:3.0.1 & testRuntime kafka-clients:3.0.1:test
-jarHell.enabled = false
 
 test {
     include '**/*.class'

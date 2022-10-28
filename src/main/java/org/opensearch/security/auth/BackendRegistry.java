@@ -258,6 +258,7 @@ public class BackendRegistry {
             }
 
             authCredenetials = ac;
+            System.err.println("Auth creds: " + ac.toString());
 
             if (ac == null) {
                 //no credentials found in request
@@ -293,6 +294,9 @@ public class BackendRegistry {
 
             //http completed       
             authenticatedUser = authcz(userCache, restRoleCache, ac, authDomain.getBackend(), restAuthorizers);
+            if (authenticatedUser != null) {
+                System.err.println("authenticatedUser: " + authenticatedUser);
+            }
 
             if(authenticatedUser == null) {
                 if (isDebugEnabled) {

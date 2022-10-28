@@ -302,6 +302,12 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
                                     SecurityDynamicConfiguration<RoleMappingsV7> rolesMappingsV7SecurityDynamicConfiguration) {
             super();
             this.internalUserV7SecurityDynamicConfiguration = internalUserV7SecurityDynamicConfiguration;
+            
+            internalUserV7SecurityDynamicConfiguration.getCEntries().forEach((key, value) -> {
+                System.err.println("User: " + key);
+            });
+
+
             this.rolesV7SecurityDynamicConfiguration = rolesV7SecurityDynamicConfiguration;
             this.rolesMappingsV7SecurityDynamicConfiguration = rolesMappingsV7SecurityDynamicConfiguration;
         }

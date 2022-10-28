@@ -45,9 +45,10 @@ public class HTTPHelper {
                 log.warn("No 'Basic Authorization' header, send 401 and 'WWW-Authenticate Basic'");
                 return null;
             } else {
+                final byte[] splitValue = Base64.getDecoder().decode(authorizationHeader.split(" ")[1]);
+                System.err.println("extractCredentials base64: " + new String(splitValue) + ", " + new String(splitValue, StandardCharsets.UTF_8));
 
-                final String decodedBasicHeader = new String(Base64.getDecoder().decode(authorizationHeader.split(" ")[1]),
-                        StandardCharsets.UTF_8);
+                final String decodedBasicHeader = new String(splitValue, StandardCharsets.UTF_8);
 
                 //username:password
                 //special case
@@ -76,6 +77,7 @@ public class HTTPHelper {
                     log.warn("Invalid 'Authorization' header, send 401 and 'WWW-Authenticate Basic'");
                     return null;
                 } else {
+                    System.err.println("Auth creds with username:" + username);
                     return new AuthCredentials(username, password.getBytes(StandardCharsets.UTF_8)).markComplete();
                 }
             }

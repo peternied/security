@@ -1,0 +1,63 @@
+name: 'Start OpenSearch'
+description: 'Downloads latest build of OpenSearch, installs a plugin, executes and script and then starts OpenSearch on localhost:9200'
+
+inputs:
+  opensearch-version:
+    description: 'The version of OpenSearch that should be used, e.g "3.0.0"'
+    required: true
+  
+  plugin-zip-path:
+    description: 'The the name of the plugin to use, such as security-dashboards-plugin'
+    required: true
+
+  plugin-start-script:
+    description: 'A script that should be run before starting OpenSearch'
+    required: true
+  # plugins/opensearch-security/tools/install_demo_configuration.sh
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download OpenSearch Core
+      run: |
+        wget https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/$opensearch_version/latest/linux/x64/tar/builds/opensearch/dist/opensearch-min-$opensearch_version-linux-x64.tar.gz
+        tar -xzf opensearch-*.tar.gz
+        rm -f opensearch-*.tar.gz
+      shell: bash
+
+    - name: Run OpenSearch with plugin
+      run: |
+        cat > os-ep.sh <<EOF
+        yes | opensearch-plugin install file:///docker-host/plugin.zip
+        chmod +x ${{ inputs.plugin-start-script }}
+        yes | ${{ inputs.plugin-start-script }}
+        chown 1001:1001 -R /opensearch
+        su -c "/opensearch/bin/opensearch" -s /bin/bash opensearch
+        EOF
+        docker build -t opensearch-test:latest -f- . <<EOF
+        FROM ubuntu:latest
+        COPY --chown=1001:1001 os-ep.sh /docker-host/
+        COPY --chown=1001:1001 plugin.zip /docker-host/${{ inputs.plugin-zip-path }}
+        COPY --chown=1001:1001 opensearch* /opensearch/
+        RUN chmod +x /docker-host/os-ep.sh
+        RUN useradd -u 1001 -s /sbin/nologin opensearch
+        ENV PATH="/opensearch/bin:${PATH}"
+        WORKDIR /opensearch/
+        ENTRYPOINT /docker-host/os-ep.sh
+        EOF
+        docker run --name ops -d -p 9200:9200 -p 9600:9600 -i opensearch-test:latest
+      shell: bash
+
+    - name: Sleep while OpenSearch finishes starting up
+      uses: whatnick/wait-action@v0.1.2
+      with:
+        time: '30s'
+
+    - name: Check OpenSearch Running
+      run: curl -XGET https://localhost:9200 -u 'admin:admin' -k -v
+      shell: bash
+
+    - name: Get Docker Logs
+      if: always()
+      run: docker logs ops
+      shell: bash

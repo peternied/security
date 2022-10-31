@@ -229,7 +229,7 @@ test {
     retry {
         failOnPassedAfterRetry = false
         maxFailures = 30
-        maxRetries = 5
+        // maxRetries = 5
     }
 }
 

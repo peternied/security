@@ -133,7 +133,7 @@ jobs:
         if_true: 'windows/x64/zip'  # string value
         if_false: 'linux/x64/tar' # string value
 
-    - uses: peternied/opensearch-dashboards-actions/download-file@main
+    - uses: peternied/download-file@main
       with:
         url: https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/${{ steps.opensearch-versions.outputs.version-previous }}/latest/${{ steps.download-platform.outputs.value }}/builds/opensearch/plugins/opensearch-security-${{ steps.opensearch-versions.outputs.version-previous }}.0.zip
 

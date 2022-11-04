@@ -139,7 +139,7 @@ jobs:
 
     - name: Copy downloaded security version to bwc-test archives
       run: |
-        ls
+        mkdir bwc-test/src/test/resources/${{ steps.opensearch-versions.outputs.version-previous }}.0
         mv opensearch-security-${{ steps.opensearch-versions.outputs.version-previous }}.0.zip bwc-test/src/test/resources/${{ steps.opensearch-versions.outputs.version-previous }}.0/
 
     # - name: Run BWC tests

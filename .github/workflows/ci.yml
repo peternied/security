@@ -136,17 +136,11 @@ jobs:
     - uses: peternied/opensearch-dashboards-actions/download-file@main
       with:
         url: https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/${{ steps.opensearch-versions.outputs.version-previous }}/latest/${{ steps.download-platform.outputs.value }}/builds/opensearch/plugins/opensearch-security-${{ steps.opensearch-versions.outputs.version-previous }}.0.zip
-        file-name: bwc-test/src/test/resources/${{ steps.opensearch-versions.outputs.version-previous }}.0/opensearch-security-${{ steps.opensearch-versions.outputs.version-previous }}.0.zip
 
-
-    # - id: install-wget
-    #   if: ${{ runner.os == 'Windows'}}
-    #   run: choco install wget --no-progress
-
-    # - run: wget https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/${{ steps.opensearch-versions.outputs.version-previous }}/latest/${{ steps.download-platform.outputs.value }}/builds/opensearch/plugins/opensearch-security-${{ steps.opensearch-versions.outputs.version-previous }}.0.zip
-
-    # - name: Copy downloaded security version to bwc-test archives
-    #   run: mv opensearch-security-${{ steps.opensearch-versions.outputs.version-previous }}.0.zip bwc-test/src/test/resources/${{ steps.opensearch-versions.outputs.version-previous }}.0/
+    - name: Copy downloaded security version to bwc-test archives
+      run: |
+        ls
+        mv opensearch-security-${{ steps.opensearch-versions.outputs.version-previous }}.0.zip bwc-test/src/test/resources/${{ steps.opensearch-versions.outputs.version-previous }}.0/
 
     # - name: Run BWC tests
     #   uses: gradle/gradle-build-action@v2

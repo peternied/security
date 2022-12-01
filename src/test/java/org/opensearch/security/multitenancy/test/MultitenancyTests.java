@@ -1,16 +1,12 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.multitenancy.test;
@@ -18,20 +14,21 @@ package org.opensearch.security.multitenancy.test;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.message.BasicHeader;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.message.BasicHeader;
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.opensearch.action.admin.indices.alias.Alias;
 import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest.AliasActions;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
+import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentType;
-import org.junit.Assert;
-import org.junit.Test;
-
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
@@ -39,6 +36,9 @@ import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.rest.RestHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class MultitenancyTests extends SingleClusterTest {
 
@@ -57,23 +57,23 @@ public class MultitenancyTests extends SingleClusterTest {
         setup(Settings.EMPTY, new DynamicSecurityConfig().setConfig("config_nodnfof.yml"), settings);
         final RestHelper rh = nonSslRestHelper();
 
-            try (TransportClient tc = getInternalTransportClient()) {
+            try (Client tc = getClient()) {
                 tc.admin().indices().create(new CreateIndexRequest("copysf")).actionGet();
 
-                tc.index(new IndexRequest("indexa").type("doc").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexa\"}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("indexb").type("doc").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexb\"}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("indexa").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexa\"}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("indexb").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexb\"}", XContentType.JSON)).actionGet();
 
 
-                tc.index(new IndexRequest("vulcangov").type("kolinahr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("starfleet").type("ships").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("starfleet_academy").type("students").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("starfleet_library").type("public").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("klingonempire").type("ships").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("public").type("legends").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("vulcangov").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("starfleet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("starfleet_academy").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("starfleet_library").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("klingonempire").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("public").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
 
-                tc.index(new IndexRequest("spock").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("kirk").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-                tc.index(new IndexRequest("role01_role02").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("spock").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("kirk").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+                tc.index(new IndexRequest("role01_role02").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
 
                 tc.admin().indices().aliases(new IndicesAliasesRequest().addAliasAction(AliasActions.add().indices("starfleet","starfleet_academy","starfleet_library").alias("sf"))).actionGet();
                 tc.admin().indices().aliases(new IndicesAliasesRequest().addAliasAction(AliasActions.add().indices("klingonempire","vulcangov").alias("nonsf"))).actionGet();
@@ -89,9 +89,9 @@ public class MultitenancyTests extends SingleClusterTest {
             System.out.println(resc.getBody());
 
             String msearchBody =
-                    "{\"index\":\"indexa\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                    "{\"index\":\"indexa\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                     "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                    "{\"index\":\"indexb\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                    "{\"index\":\"indexb\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                     "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
             System.out.println("#### msearch a");
             resc = rh.executePostRequest("_msearch?pretty", msearchBody, encodeBasicHeader("user_a", "user_a"));
@@ -112,9 +112,9 @@ public class MultitenancyTests extends SingleClusterTest {
             Assert.assertTrue(resc.getBody(), resc.getBody().contains("permission"));
 
             msearchBody =
-                    "{\"index\":\"indexc\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                    "{\"index\":\"indexc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                     "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                    "{\"index\":\"indexd\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                    "{\"index\":\"indexd\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                     "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
 
             System.out.println("#### msearch b2");
@@ -132,12 +132,10 @@ public class MultitenancyTests extends SingleClusterTest {
                     "\"docs\" : ["+
                         "{"+
                              "\"_index\" : \"indexa\","+
-                            "\"_type\" : \"doc\","+
                             "\"_id\" : \"0\""+
                        " },"+
                        " {"+
                            "\"_index\" : \"indexb\","+
-                           " \"_type\" : \"doc\","+
                            " \"_id\" : \"0\""+
                         "}"+
                     "]"+
@@ -154,12 +152,10 @@ public class MultitenancyTests extends SingleClusterTest {
                     "\"docs\" : ["+
                         "{"+
                              "\"_index\" : \"indexx\","+
-                            "\"_type\" : \"doc\","+
                             "\"_id\" : \"0\""+
                        " },"+
                        " {"+
                            "\"_index\" : \"indexy\","+
-                           " \"_type\" : \"doc\","+
                            " \"_id\" : \"0\""+
                         "}"+
                     "]"+
@@ -211,17 +207,17 @@ public class MultitenancyTests extends SingleClusterTest {
 
         HttpResponse res;
         String body = "{\"buildNum\": 15460, \"defaultIndex\": \"humanresources\", \"tenant\": \"human_resources\"}";
-        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, (res = rh.executePutRequest(".kibana/config/5.6.0?pretty",body, new BasicHeader("securitytenant", "blafasel"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, (res = rh.executePutRequest(".kibana/_doc/5.6.0?pretty",body, new BasicHeader("securitytenant", "blafasel"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
 
         body = "{\"buildNum\": 15460, \"defaultIndex\": \"humanresources\", \"tenant\": \"human_resources\"}";
-        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, (res = rh.executePutRequest(".kibana/config/5.6.0?pretty",body, new BasicHeader("securitytenant", "business_intelligence"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, (res = rh.executePutRequest(".kibana/_doc/5.6.0?pretty",body, new BasicHeader("securitytenant", "business_intelligence"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
 
         body = "{\"buildNum\": 15460, \"defaultIndex\": \"humanresources\", \"tenant\": \"human_resources\"}";
-        Assert.assertEquals(HttpStatus.SC_CREATED, (res = rh.executePutRequest(".kibana/config/5.6.0?pretty",body, new BasicHeader("securitytenant", "human_resources"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_CREATED, (res = rh.executePutRequest(".kibana/_doc/5.6.0?pretty",body, new BasicHeader("securitytenant", "human_resources"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
         System.out.println(res.getBody());
         Assert.assertEquals(".kibana_1592542611_humanresources_1", DefaultObjectMapper.readTree(res.getBody()).get("_index").asText());
 
-        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/config/5.6.0?pretty",new BasicHeader("securitytenant", "human_resources"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/_doc/5.6.0?pretty",new BasicHeader("securitytenant", "human_resources"), encodeBasicHeader("hr_employee", "hr_employee"))).getStatusCode());
         System.out.println(res.getBody());
         Assert.assertTrue(WildcardMatcher.from("*human_resources*").test(res.getBody()));
 
@@ -239,7 +235,7 @@ public class MultitenancyTests extends SingleClusterTest {
         setup(settings);
 
         final String dashboardsIndex = ".kibana_92668751_admin_1";
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             String body = "{"+
                     "\"type\" : \"index-pattern\","+
                     "\"updated_at\" : \"2018-09-29T08:56:59.066Z\","+
@@ -254,7 +250,7 @@ public class MultitenancyTests extends SingleClusterTest {
                 .alias(new Alias(".kibana_92668751_admin")))
                 .actionGet();
 
-            tc.index(new IndexRequest(dashboardsIndex).type("doc")
+            tc.index(new IndexRequest(dashboardsIndex)
                     .id("index-pattern:9fbbd1a0-c3c5-11e8-a13f-71b8ea5a4f7b")
                     .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                     .source(body, XContentType.JSON)).actionGet();
@@ -274,7 +270,7 @@ public class MultitenancyTests extends SingleClusterTest {
 
         System.out.println("#### msearch");
         body =
-                "{\"index\":\".kibana\", \"type\":\"doc\", \"ignore_unavailable\": false}"+System.lineSeparator()+
+                "{\"index\":\".kibana\", \"ignore_unavailable\": false}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
 
         Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executePostRequest("_msearch/?pretty",body, new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("admin", "admin"))).getStatusCode());
@@ -285,7 +281,7 @@ public class MultitenancyTests extends SingleClusterTest {
         Assert.assertTrue(res.getBody().contains(dashboardsIndex));
 
         System.out.println("#### get");
-        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/doc/index-pattern:9fbbd1a0-c3c5-11e8-a13f-71b8ea5a4f7b?pretty", new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("admin", "admin"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/_doc/index-pattern:9fbbd1a0-c3c5-11e8-a13f-71b8ea5a4f7b?pretty", new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("admin", "admin"))).getStatusCode());
         //System.out.println(res.getBody());
         Assert.assertFalse(res.getBody().contains("exception"));
         Assert.assertTrue(res.getBody().contains("humanresources"));
@@ -293,7 +289,7 @@ public class MultitenancyTests extends SingleClusterTest {
         Assert.assertTrue(res.getBody().contains(dashboardsIndex));
 
         System.out.println("#### mget");
-        body = "{\"docs\" : [{\"_index\" : \".kibana\",\"_type\" : \"doc\",\"_id\" : \"index-pattern:9fbbd1a0-c3c5-11e8-a13f-71b8ea5a4f7b\"}]}";
+        body = "{\"docs\" : [{\"_index\" : \".kibana\",\"_id\" : \"index-pattern:9fbbd1a0-c3c5-11e8-a13f-71b8ea5a4f7b\"}]}";
         Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executePostRequest("_mget/?pretty",body, new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("admin", "admin"))).getStatusCode());
         //System.out.println(res.getBody());
         Assert.assertFalse(res.getBody().contains("exception"));
@@ -307,7 +303,7 @@ public class MultitenancyTests extends SingleClusterTest {
                 "\"index-pattern\" : {"+
                   "\"title\" : \"xyz\""+
                  "}}";
-        Assert.assertEquals(HttpStatus.SC_CREATED, (res = rh.executePutRequest(".kibana/doc/abc?pretty",body, new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("admin", "admin"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_CREATED, (res = rh.executePutRequest(".kibana/_doc/abc?pretty",body, new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("admin", "admin"))).getStatusCode());
         //System.out.println(res.getBody());
         Assert.assertFalse(res.getBody().contains("exception"));
         Assert.assertTrue(res.getBody().contains("\"result\" : \"created\""));
@@ -315,9 +311,9 @@ public class MultitenancyTests extends SingleClusterTest {
 
         System.out.println("#### bulk");
         body =
-                "{ \"index\" : { \"_index\" : \".kibana\", \"_type\" : \"doc\", \"_id\" : \"b1\" } }"+System.lineSeparator()+
+                "{ \"index\" : { \"_index\" : \".kibana\", \"_id\" : \"b1\" } }"+System.lineSeparator()+
                 "{ \"field1\" : \"value1\" }" +System.lineSeparator()+
-                "{ \"index\" : { \"_index\" : \".kibana\", \"_type\" : \"doc\", \"_id\" : \"b2\" } }"+System.lineSeparator()+
+                "{ \"index\" : { \"_index\" : \".kibana\", \"_id\" : \"b2\" } }"+System.lineSeparator()+
                 "{ \"field2\" : \"value2\" }"+System.lineSeparator();
 
         Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executePutRequest("_bulk?pretty",body, new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("admin", "admin"))).getStatusCode());
@@ -339,7 +335,7 @@ public class MultitenancyTests extends SingleClusterTest {
                 .build();
         setup(settings);
 
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             String body = "{\"buildNum\": 15460, \"defaultIndex\": \"humanresources\", \"tenant\": \"human_resources\"}";
             Map indexSettings = new HashMap();
             indexSettings.put("number_of_shards", 1);
@@ -349,14 +345,14 @@ public class MultitenancyTests extends SingleClusterTest {
                 .settings(indexSettings))
                 .actionGet();
 
-            tc.index(new IndexRequest(".kibana-6").type("doc").id("6.2.2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(body, XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest(".kibana-6").id("6.2.2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(body, XContentType.JSON)).actionGet();
         }
 
         final RestHelper rh = nonSslRestHelper();
 
         HttpResponse res;
-        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana-6/doc/6.2.2?pretty", encodeBasicHeader("kibanaro", "kibanaro"))).getStatusCode());
-        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/doc/6.2.2?pretty", encodeBasicHeader("kibanaro", "kibanaro"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana-6/_doc/6.2.2?pretty", encodeBasicHeader("kibanaro", "kibanaro"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/_doc/6.2.2?pretty", encodeBasicHeader("kibanaro", "kibanaro"))).getStatusCode());
 
         System.out.println(res.getBody());
 
@@ -368,7 +364,7 @@ public class MultitenancyTests extends SingleClusterTest {
                 .build();
         setup(settings);
 
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             String body = "{\"buildNum\": 15460, \"defaultIndex\": \"humanresources\", \"tenant\": \"human_resources\"}";
             Map indexSettings = new HashMap();
             indexSettings.put("number_of_shards", 1);
@@ -378,17 +374,67 @@ public class MultitenancyTests extends SingleClusterTest {
                 .settings(indexSettings))
                 .actionGet();
 
-            tc.index(new IndexRequest(".kibana_1").type("doc").id("6.2.2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(body, XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest(".kibana_-900636979_kibanaro").type("doc").id("6.2.2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(body, XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest(".kibana_1").id("6.2.2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(body, XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest(".kibana_-900636979_kibanaro").id("6.2.2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(body, XContentType.JSON)).actionGet();
 
         }
 
         final RestHelper rh = nonSslRestHelper();
 
         HttpResponse res;
-        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/doc/6.2.2?pretty", new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("kibanaro", "kibanaro"))).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest(".kibana/_doc/6.2.2?pretty", new BasicHeader("securitytenant", "__user__"), encodeBasicHeader("kibanaro", "kibanaro"))).getStatusCode());
         System.out.println(res.getBody());
         Assert.assertTrue(res.getBody().contains(".kibana_-900636979_kibanaro"));
     }
 
+
+    @Test
+    public void testTenantParametersSubstitution() throws Exception {
+        final Settings settings = Settings.builder()
+                .build();
+        setup(settings);
+        final RestHelper rh = nonSslRestHelper();
+
+        HttpResponse res;
+        final String url = ".kibana/_doc/5.6.0?pretty";
+
+        final String tenantName = "tenant_parameters_substitution";
+        final String createTenantBody = "{\"buildNum\": 15460, \"defaultIndex\": \"plop\", \"tenant\": \"" + tenantName + "\"}";
+        final Header asNoAccessUser = encodeBasicHeader("hr_employee", "hr_employee");
+        final Header asUser = encodeBasicHeader("user_tenant_parameters_substitution", "user_tenant_parameters_substitution");
+
+        final Header actOnNoAccessTenant = new BasicHeader("securitytenant", "blafasel");
+        final Header actOnUserTenant = new BasicHeader("securitytenant", tenantName);
+
+        res = rh.executePutRequest(url, createTenantBody, asUser, actOnNoAccessTenant);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_FORBIDDEN));
+
+        res = rh.executePutRequest(url, createTenantBody, asNoAccessUser, actOnUserTenant);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_FORBIDDEN));
+
+        res = rh.executePutRequest(url, createTenantBody, asUser, actOnUserTenant);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_CREATED));
+
+        res = rh.executeGetRequest(url, asUser, actOnUserTenant);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_OK));
+        assertThat(res.findValueInJson("_source.tenant"), equalTo(tenantName));
+
+
+        final String tenantNameAppended = "tenant_parameters_substitution_1";
+        final String createTenantAppendedBody = "{\"buildNum\": 15460, \"defaultIndex\": \"plop\", \"tenant\": \"" + tenantNameAppended + "\"}";
+        final Header userTenantAppended = new BasicHeader("securitytenant", tenantNameAppended);
+
+        res = rh.executeGetRequest(url, asNoAccessUser, userTenantAppended);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_FORBIDDEN));
+
+        res = rh.executeGetRequest(url, asUser, userTenantAppended);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_NOT_FOUND));
+
+        res = rh.executePutRequest(url, createTenantAppendedBody, asUser, userTenantAppended);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_CREATED));
+
+        res = rh.executeGetRequest(url, asUser, userTenantAppended);
+        assertThat(res.getStatusCode(), equalTo(HttpStatus.SC_OK));
+        assertThat(res.findValueInJson("_source.tenant"), equalTo(tenantNameAppended));
+    }
 }

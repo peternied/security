@@ -1,48 +1,40 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.dlsfls;
 
-import org.apache.http.HttpStatus;
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.xcontent.XContentType;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.support.WriteRequest.RefreshPolicy;
+import org.opensearch.client.Client;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 public class FlsExistsFieldsTest extends AbstractDlsFlsTest {
 
-    protected void populateData(TransportClient tc) {
+    protected void populateData(Client tc) {
 
-        tc.admin().indices().create(new CreateIndexRequest("data").mapping("doc",
-                "@timestamp", "type=date",
-                "host", "type=text,norms=false",
-                "response", "type=text,norms=false",
-                "non-existing", "type=text,norms=false"
-        ))
+        tc.admin().indices().create(new CreateIndexRequest("data")
+                .simpleMapping("@timestamp", "type=date", "host", "type=text,norms=false", "response", "type=text,norms=false", "non-existing", "type=text,norms=false"))
                 .actionGet();
 
         for (int i = 0; i < 1; i++) {
             String doc = "{\"host\" : \"myhost"+i+"\",\n" +
                     "        \"@timestamp\" : \"2018-01-18T09:03:25.877Z\",\n" +
                     "        \"response\": \"404\"}";
-            tc.index(new IndexRequest("data").type("doc").id("a-normal-" + i).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(doc,
+            tc.index(new IndexRequest("data").id("a-normal-" + i).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(doc,
                     XContentType.JSON)).actionGet();
         }
 
@@ -50,7 +42,7 @@ public class FlsExistsFieldsTest extends AbstractDlsFlsTest {
             String doc = "{" +
                     "        \"@timestamp\" : \"2017-01-18T09:03:25.877Z\",\n" +
                     "        \"response\": \"200\"}";
-            tc.index(new IndexRequest("data").type("doc").id("b-missing1-" + i).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(doc,
+            tc.index(new IndexRequest("data").id("b-missing1-" + i).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(doc,
                     XContentType.JSON)).actionGet();
         }
 
@@ -59,7 +51,7 @@ public class FlsExistsFieldsTest extends AbstractDlsFlsTest {
                     "        \"@timestamp\" : \"2018-01-18T09:03:25.877Z\",\n" +
                     "         \"non-existing\": \"xxx\","+
                     "        \"response\": \"403\"}";
-            tc.index(new IndexRequest("data").type("doc").id("c-missing2-" + i).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(doc,
+            tc.index(new IndexRequest("data").id("c-missing2-" + i).setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(doc,
                     XContentType.JSON)).actionGet();
         }
 

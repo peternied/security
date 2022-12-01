@@ -14,53 +14,40 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.netty.handler.ssl.OpenSsl;
-
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.TreeSet;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.message.BasicHeader;
-import org.opensearch.OpenSearchSecurityException;
-import org.opensearch.action.admin.cluster.reroute.ClusterRerouteRequest;
-import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest;
-import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest.AliasActions;
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.common.xcontent.XContentType;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.netty.handler.ssl.OpenSsl;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
-import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
+import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest;
+import org.opensearch.action.admin.indices.alias.IndicesAliasesRequest.AliasActions;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.support.WriteRequest.RefreshPolicy;
+import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
-import org.opensearch.security.action.whoami.WhoAmIAction;
-import org.opensearch.security.action.whoami.WhoAmIRequest;
-import org.opensearch.security.action.whoami.WhoAmIResponse;
 import org.opensearch.security.http.HTTPClientCertAuthenticator;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
@@ -68,32 +55,23 @@ import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
+import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 import static org.opensearch.security.DefaultObjectMapper.readTree;
 
 public class IntegrationTests extends SingleClusterTest {
 
     @Test
-    public void testSearchScroll() throws Exception {
-        
-        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                e.printStackTrace();
-                
-            }
-        });
-        
+    public void testSearchScroll() throws Exception {        
     final Settings settings = Settings.builder()
             .putList(ConfigConstants.SECURITY_AUTHCZ_REST_IMPERSONATION_USERS+".worf", "knuddel","nonexists")
             .build();
     setup(settings);
     final RestHelper rh = nonSslRestHelper();
 
-        try (TransportClient tc = getInternalTransportClient()) {                    
+        try (Client tc = getClient()) {
             for(int i=0; i<3; i++)
-            tc.index(new IndexRequest("vulcangov").type("kolinahr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();                
+            tc.index(new IndexRequest("vulcangov").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
         }
         
         
@@ -113,56 +91,7 @@ public class IntegrationTests extends SingleClusterTest {
         
         
     }
-    
-    @Test
-    public void testNotInsecure() throws Exception {
-        setup(Settings.EMPTY, new DynamicSecurityConfig().setSecurityRoles("roles_deny.yml"), Settings.EMPTY, true);
-        final RestHelper rh = nonSslRestHelper();
-        
-        try (TransportClient tc = getInternalTransportClient()) {               
-            //create indices and mapping upfront
-            tc.index(new IndexRequest("test").type("type1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"field2\":\"init\"}", XContentType.JSON)).actionGet();           
-            tc.index(new IndexRequest("lorem").type("type1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"field2\":\"init\"}", XContentType.JSON)).actionGet();      
-        
-            WhoAmIResponse wres = tc.execute(WhoAmIAction.INSTANCE, new WhoAmIRequest()).actionGet();
-            System.out.println(wres);
-            Assert.assertEquals("CN=kirk,OU=client,O=client,L=Test,C=DE", wres.getDn());
-            Assert.assertTrue(wres.isAdmin());
-            Assert.assertTrue(wres.toString(), wres.isAuthenticated());
-            Assert.assertFalse(wres.toString(), wres.isNodeCertificateRequest());
-        }
-        
-        HttpResponse res = rh.executePutRequest("test/_mapping?pretty", "{\"properties\": {\"name\":{\"type\":\"text\"}}}", encodeBasicHeader("writer", "writer"));
-        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, res.getStatusCode());  
-        
-        res = rh.executePostRequest("_cluster/reroute", "{}", encodeBasicHeader("writer", "writer"));
-        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, res.getStatusCode());  
-        
-        try (TransportClient tc = getUserTransportClient(clusterInfo, "spock-keystore.jks", Settings.EMPTY)) {               
-            //create indices and mapping upfront
-            try {
-                tc.admin().indices().putMapping(new PutMappingRequest("test").type("typex").source("fieldx","type=text")).actionGet();
-                Assert.fail();
-            } catch (OpenSearchSecurityException e) {
-                Assert.assertTrue(e.toString(),e.getMessage().contains("no permissions for"));
-            }          
-            
-            try {
-                tc.admin().cluster().reroute(new ClusterRerouteRequest()).actionGet();
-                Assert.fail();
-            } catch (OpenSearchSecurityException e) {
-                Assert.assertTrue(e.toString(),e.getMessage().contains("no permissions for [cluster:admin/reroute]"));
-            }
-            
-            WhoAmIResponse wres = tc.execute(WhoAmIAction.INSTANCE, new WhoAmIRequest()).actionGet();                
-            Assert.assertEquals("CN=spock,OU=client,O=client,L=Test,C=DE", wres.getDn());
-            Assert.assertFalse(wres.isAdmin());
-            Assert.assertTrue(wres.toString(), wres.isAuthenticated());
-            Assert.assertFalse(wres.toString(), wres.isNodeCertificateRequest());
-        }
 
-    }
-    
     @Test
     public void testDnParsingCertAuth() throws Exception {
         Settings settings = Settings.builder()
@@ -255,9 +184,9 @@ public class IntegrationTests extends SingleClusterTest {
     
         setup();
     
-        try (TransportClient tc = getInternalTransportClient()) {
-            tc.index(new IndexRequest("mindex1").type("type").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("mindex2").type("type").id("2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
+        try (Client tc = getClient()) {
+            tc.index(new IndexRequest("mindex1").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("mindex2").id("2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
         }
     
         //opendistro_security_multiget -> picard
@@ -267,12 +196,10 @@ public class IntegrationTests extends SingleClusterTest {
             "\"docs\" : ["+
                 "{"+
                      "\"_index\" : \"mindex1\","+
-                    "\"_type\" : \"type\","+
                     "\"_id\" : \"1\""+
                " },"+
                " {"+
                    "\"_index\" : \"mindex2\","+
-                   " \"_type\" : \"type\","+
                    " \"_id\" : \"2\""+
                 "}"+
             "]"+
@@ -321,8 +248,8 @@ public class IntegrationTests extends SingleClusterTest {
     
         setup();
     
-        try (TransportClient tc = getInternalTransportClient()) {          
-            tc.index(new IndexRequest("shakespeare").type("type").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+        try (Client tc = getClient()) {
+            tc.index(new IndexRequest("shakespeare").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
                       
             ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new String[]{"config","roles","rolesmapping","internalusers","actiongroups"})).actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
@@ -369,12 +296,12 @@ public class IntegrationTests extends SingleClusterTest {
         
         setup(Settings.EMPTY, new DynamicSecurityConfig(), Settings.EMPTY);
 
-        try (TransportClient tc = getInternalTransportClient(this.clusterInfo, Settings.EMPTY)) {
-            tc.index(new IndexRequest("indexa").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"indexa\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("indexb").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"indexb\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("isallowed").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"isallowed\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("special").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"special\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("alsonotallowed").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"alsonotallowed\":1}", XContentType.JSON)).actionGet();
+        try (Client tc = getClient()) {
+            tc.index(new IndexRequest("indexa").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"indexa\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("indexb").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"indexb\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("isallowed").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"isallowed\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("special").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"special\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("alsonotallowed").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"alsonotallowed\":1}", XContentType.JSON)).actionGet();
         }
         
         RestHelper rh = nonSslRestHelper();
@@ -391,9 +318,9 @@ public class IntegrationTests extends SingleClusterTest {
         setup();
         final RestHelper rh = nonSslRestHelper();
 
-        try (TransportClient tc = getInternalTransportClient()) {    
-            tc.index(new IndexRequest("mindex_1").type("logs").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("mindex_2").type("logs").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
+        try (Client tc = getClient()) {
+            tc.index(new IndexRequest("mindex_1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("mindex_2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
         }
         
         HttpResponse res = rh.executeGetRequest("/mindex_1,mindex_2/_search", encodeBasicHeader("mindex12", "nagilum"));
@@ -402,8 +329,8 @@ public class IntegrationTests extends SingleClusterTest {
         Assert.assertFalse(res.getBody().contains("\"content\":1"));
         Assert.assertFalse(res.getBody().contains("\"content\":2"));
         
-        try (TransportClient tc = getInternalTransportClient()) {                                       
-            tc.index(new IndexRequest(".opendistro_security").type(getType()).id("config").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("config", FileHelper.readYamlContent("config_multirolespan.yml"))).actionGet();
+        try (Client tc = getClient()) {
+            tc.index(new IndexRequest(".opendistro_security").id("config").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("config", FileHelper.readYamlContent("config_multirolespan.yml"))).actionGet();
    
             ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new String[]{"config"})).actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
@@ -423,11 +350,11 @@ public class IntegrationTests extends SingleClusterTest {
         setup(Settings.EMPTY, new DynamicSecurityConfig().setConfig("config_multirolespan.yml"), Settings.EMPTY);
         final RestHelper rh = nonSslRestHelper();
 
-        try (TransportClient tc = getInternalTransportClient()) {                                       
-            tc.index(new IndexRequest("mindex_1").type("logs").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("mindex_2").type("logs").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("mindex_3").type("logs").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("mindex_4").type("logs").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
+        try (Client tc = getClient()) {
+            tc.index(new IndexRequest("mindex_1").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("mindex_2").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("mindex_3").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("mindex_4").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":2}", XContentType.JSON)).actionGet();
         }
         
         HttpResponse res = rh.executeGetRequest("/mindex_1,mindex_2/_search", encodeBasicHeader("mindex12", "nagilum"));
@@ -447,9 +374,9 @@ public class IntegrationTests extends SingleClusterTest {
         setup();
         final RestHelper rh = nonSslRestHelper();
         
-        HttpResponse res = rh.executePostRequest("abc_xyz_2018_05_24/logs/1", "{\"content\":1}", encodeBasicHeader("underscore", "nagilum"));
+        HttpResponse res = rh.executePostRequest("abc_xyz_2018_05_24/_doc/1", "{\"content\":1}", encodeBasicHeader("underscore", "nagilum"));
         
-        res = rh.executeGetRequest("abc_xyz_2018_05_24/logs/1", encodeBasicHeader("underscore", "nagilum"));
+        res = rh.executeGetRequest("abc_xyz_2018_05_24/_doc/1", encodeBasicHeader("underscore", "nagilum"));
         Assert.assertTrue(res.getBody(),res.getBody().contains("\"content\":1"));
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
         res = rh.executeGetRequest("abc_xyz_2018_05_24/_refresh", encodeBasicHeader("underscore", "nagilum"));
@@ -463,9 +390,9 @@ public class IntegrationTests extends SingleClusterTest {
 
         setup(Settings.EMPTY, new DynamicSecurityConfig().setConfig("config_dnfof.yml"), Settings.EMPTY);
 
-        try (TransportClient tc = getInternalTransportClient()) {                    
+        try (Client tc = getClient()) {
             for(int i=0; i<3; i++) {
-                tc.index(new IndexRequest("vulcangov").type("kolinahr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();        
+                tc.index(new IndexRequest("vulcangov").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
             }
         }
 
@@ -484,13 +411,13 @@ public class IntegrationTests extends SingleClusterTest {
         setup(settings);
         final RestHelper rh = nonSslRestHelper();
 
-        try (TransportClient tc = getInternalTransportClient()) {
-            tc.index(new IndexRequest("indexc").type("typec").id("0")
+        try (Client tc = getClient()) {
+            tc.index(new IndexRequest("indexc").id("0")
                     .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                     .source("{\"content\":1}", XContentType.JSON)).actionGet();
         }
 
-        HttpResponse res = rh.executePostRequest("indexc/typec/0/_update?pretty=true&refresh=true", "{\"doc\" : {\"content\":2}}",
+        HttpResponse res = rh.executePostRequest("indexc/_update/0?pretty=true&refresh=true", "{\"doc\" : {\"content\":2}}",
                 encodeBasicHeader("user_c", "user_c"));
         System.out.println(res.getBody());
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
@@ -507,23 +434,23 @@ public class IntegrationTests extends SingleClusterTest {
         setup(Settings.EMPTY, new DynamicSecurityConfig().setConfig("config_dnfof.yml"), settings);
         final RestHelper rh = nonSslRestHelper();
 
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             tc.admin().indices().create(new CreateIndexRequest("copysf")).actionGet();
 
-            tc.index(new IndexRequest("indexa").type("doc").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexa\"}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("indexb").type("doc").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexb\"}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("indexa").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexa\"}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("indexb").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexb\"}", XContentType.JSON)).actionGet();
 
 
-            tc.index(new IndexRequest("vulcangov").type("kolinahr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("starfleet").type("ships").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("starfleet_academy").type("students").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("starfleet_library").type("public").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("klingonempire").type("ships").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("public").type("legends").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("vulcangov").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("starfleet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("starfleet_academy").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("starfleet_library").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("klingonempire").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("public").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
 
-            tc.index(new IndexRequest("spock").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("kirk").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("role01_role02").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("spock").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("kirk").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("role01_role02").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
 
             tc.admin().indices().aliases(new IndicesAliasesRequest().addAliasAction(AliasActions.add().indices("starfleet","starfleet_academy","starfleet_library").alias("sf"))).actionGet();
             tc.admin().indices().aliases(new IndicesAliasesRequest().addAliasAction(AliasActions.add().indices("klingonempire","vulcangov").alias("nonsf"))).actionGet();
@@ -547,11 +474,11 @@ public class IntegrationTests extends SingleClusterTest {
         Assert.assertFalse(resc.getBody(), resc.getBody().contains("permission"));
 
         String msearchBody =
-                "{\"index\":\"indexa\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexa\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                "{\"index\":\"indexb\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexb\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                "{\"index\":\"index*\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"index*\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
         System.out.println("#### msearch");
         resc = rh.executePostRequest("_msearch?pretty", msearchBody, encodeBasicHeader("user_a", "user_a"));
@@ -575,9 +502,9 @@ public class IntegrationTests extends SingleClusterTest {
         Assert.assertEquals(2, resc.getBody().split("\"status\" : 403").length);
 
         msearchBody =
-                "{\"index\":\"indexc\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                "{\"index\":\"indexd\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexd\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
 
         resc = rh.executePostRequest("_msearch?pretty", msearchBody, encodeBasicHeader("user_b", "user_b"));
@@ -587,12 +514,10 @@ public class IntegrationTests extends SingleClusterTest {
                 "\"docs\" : ["+
                 "{"+
                 "\"_index\" : \"indexa\","+
-                "\"_type\" : \"doc\","+
                 "\"_id\" : \"0\""+
                 " },"+
                 " {"+
                 "\"_index\" : \"indexb\","+
-                " \"_type\" : \"doc\","+
                 " \"_id\" : \"0\""+
                 "}"+
                 "]"+
@@ -610,12 +535,10 @@ public class IntegrationTests extends SingleClusterTest {
                 "\"docs\" : ["+
                 "{"+
                 "\"_index\" : \"indexx\","+
-                "\"_type\" : \"doc\","+
                 "\"_id\" : \"0\""+
                 " },"+
                 " {"+
                 "\"_index\" : \"indexy\","+
-                " \"_type\" : \"doc\","+
                 " \"_id\" : \"0\""+
                 "}"+
                 "]"+
@@ -682,23 +605,23 @@ public class IntegrationTests extends SingleClusterTest {
         setup(Settings.EMPTY, new DynamicSecurityConfig(), settings);
         final RestHelper rh = nonSslRestHelper();
 
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             tc.admin().indices().create(new CreateIndexRequest("copysf")).actionGet();
 
-            tc.index(new IndexRequest("indexa").type("doc").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexa\"}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("indexb").type("doc").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexb\"}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("indexa").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexa\"}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("indexb").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":\"indexb\"}", XContentType.JSON)).actionGet();
 
 
-            tc.index(new IndexRequest("vulcangov").type("kolinahr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("starfleet").type("ships").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("starfleet_academy").type("students").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("starfleet_library").type("public").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("klingonempire").type("ships").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("public").type("legends").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("vulcangov").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("starfleet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("starfleet_academy").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("starfleet_library").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("klingonempire").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("public").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
 
-            tc.index(new IndexRequest("spock").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("kirk").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("role01_role02").type("type01").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("spock").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("kirk").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
+            tc.index(new IndexRequest("role01_role02").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"content\":1}", XContentType.JSON)).actionGet();
 
             tc.admin().indices().aliases(new IndicesAliasesRequest().addAliasAction(AliasActions.add().indices("starfleet","starfleet_academy","starfleet_library").alias("sf"))).actionGet();
             tc.admin().indices().aliases(new IndicesAliasesRequest().addAliasAction(AliasActions.add().indices("klingonempire","vulcangov").alias("nonsf"))).actionGet();
@@ -714,9 +637,9 @@ public class IntegrationTests extends SingleClusterTest {
         System.out.println(resc.getBody());
 
         String msearchBody =
-                "{\"index\":\"indexa\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexa\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                "{\"index\":\"indexb\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexb\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
         System.out.println("#### msearch a");
         resc = rh.executePostRequest("_msearch?pretty", msearchBody, encodeBasicHeader("user_a", "user_a"));
@@ -737,9 +660,9 @@ public class IntegrationTests extends SingleClusterTest {
         Assert.assertTrue(resc.getBody(), resc.getBody().contains("permission"));
 
         msearchBody =
-                "{\"index\":\"indexc\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                "{\"index\":\"indexd\", \"type\":\"doc\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"indexd\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
 
         System.out.println("#### msearch b2");
@@ -757,12 +680,10 @@ public class IntegrationTests extends SingleClusterTest {
                 "\"docs\" : ["+
                 "{"+
                 "\"_index\" : \"indexa\","+
-                "\"_type\" : \"doc\","+
                 "\"_id\" : \"0\""+
                 " },"+
                 " {"+
                 "\"_index\" : \"indexb\","+
-                " \"_type\" : \"doc\","+
                 " \"_id\" : \"0\""+
                 "}"+
                 "]"+
@@ -779,12 +700,10 @@ public class IntegrationTests extends SingleClusterTest {
                 "\"docs\" : ["+
                 "{"+
                 "\"_index\" : \"indexx\","+
-                "\"_type\" : \"doc\","+
                 "\"_id\" : \"0\""+
                 " },"+
                 " {"+
                 "\"_index\" : \"indexy\","+
-                " \"_type\" : \"doc\","+
                 " \"_id\" : \"0\""+
                 "}"+
                 "]"+

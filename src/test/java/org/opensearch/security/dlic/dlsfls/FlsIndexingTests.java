@@ -11,14 +11,22 @@
 
 package org.opensearch.security.dlic.dlsfls;
 
+<<<<<<< HEAD
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
+=======
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
+>>>>>>> origin/main
 import org.junit.Test;
 
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.client.Client;
+<<<<<<< HEAD
 import org.opensearch.client.transport.TransportClient;
+=======
+>>>>>>> origin/main
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
@@ -30,8 +38,12 @@ import static org.hamcrest.core.StringContains.containsString;
 
 public class FlsIndexingTests extends AbstractDlsFlsTest {
 
+<<<<<<< HEAD
     @Override
     void populateData(final TransportClient tc) {
+=======
+    protected void populateData(final Client tc) {
+>>>>>>> origin/main
         // Create several documents in different indices with shared field names,
         // different roles will have different levels of FLS restrictions
         tc.index(new IndexRequest("yellow-pages").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE)

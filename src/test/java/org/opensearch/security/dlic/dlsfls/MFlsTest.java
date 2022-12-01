@@ -1,38 +1,34 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.dlsfls;
 
-import org.apache.http.HttpStatus;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.xcontent.XContentType;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.support.WriteRequest.RefreshPolicy;
+import org.opensearch.client.Client;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 public class MFlsTest extends AbstractDlsFlsTest{
 
 
-    protected void populateData(TransportClient tc) {
+    protected void populateData(Client tc) {
 
-        tc.index(new IndexRequest("deals").type("deals").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+        tc.index(new IndexRequest("deals").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                 .source("{\"customer\": {\"name\":\"cust1\"}, \"zip\": \"12345\",\"secret\": \"tellnoone\",\"amount\": 10}", XContentType.JSON)).actionGet();
-        tc.index(new IndexRequest("finance").type("finance").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+        tc.index(new IndexRequest("finance").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                 .source("{\"finfield2\":\"fff\",\"xcustomer\": {\"name\":\"cust2\", \"ctype\":\"industry\"}, \"famount\": 1500}", XContentType.JSON)).actionGet();
     }
 
@@ -57,9 +53,9 @@ public class MFlsTest extends AbstractDlsFlsTest{
         //mget
         //msearch
         String msearchBody =
-                "{\"index\":\"deals\", \"type\":\"deals\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"deals\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                "{\"index\":\"finance\", \"type\":\"finance\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"finance\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
 
         System.out.println("### msearch");
@@ -78,12 +74,10 @@ public class MFlsTest extends AbstractDlsFlsTest{
                 "\"docs\" : ["+
                     "{"+
                          "\"_index\" : \"deals\","+
-                        "\"_type\" : \"deals\","+
                         "\"_id\" : \"0\""+
                    " },"+
                    " {"+
                        "\"_index\" : \"finance\","+
-                       " \"_type\" : \"finance\","+
                        " \"_id\" : \"1\""+
                     "}"+
                 "]"+

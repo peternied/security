@@ -14,23 +14,24 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security;
 
-import org.apache.http.HttpStatus;
+import java.io.IOException;
+
+import org.apache.hc.core5.http.HttpStatus;
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.opensearch.action.admin.cluster.settings.ClusterUpdateSettingsRequest;
@@ -41,14 +42,12 @@ import org.opensearch.node.Node;
 import org.opensearch.node.PluginAwareNode;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.test.helper.rest.RestHelper;
+import org.opensearch.security.test.AbstractSecurityUnitTest;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.cluster.ClusterConfiguration;
 import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.transport.Netty4Plugin;
-import org.junit.Assert;
-import org.junit.Test;
-import java.io.IOException;
+import org.opensearch.security.test.helper.rest.RestHelper;
+import org.opensearch.transport.Netty4ModulePlugin;
 
 public class SlowIntegrationTests extends SingleClusterTest {
 
@@ -72,12 +71,9 @@ public class SlowIntegrationTests extends SingleClusterTest {
         Assert.assertEquals(ClusterHealthStatus.GREEN, clusterHelper.nodeClient().admin().cluster().health(new ClusterHealthRequest().waitForGreenStatus()).actionGet().getStatus());
     
         
-        final Settings tcSettings = Settings.builder()
+        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false) 
                 .put(minimumSecuritySettings(Settings.EMPTY).get(0))
                 .put("cluster.name", clusterInfo.clustername)
-                .put("node.data", false)
-                .put("node.master", false)
-                .put("node.ingest", false)
                 .put("path.data", "./target/data/" + clusterInfo.clustername + "/cert/data")
                 .put("path.logs", "./target/data/" + clusterInfo.clustername + "/cert/logs")
                 .put("path.home", "./target")
@@ -88,7 +84,7 @@ public class SlowIntegrationTests extends SingleClusterTest {
     
         log.debug("Start node client");
         
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class).start()) {
+        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class).start()) {
             Assert.assertFalse(node.client().admin().cluster().health(new ClusterHealthRequest().waitForNodes(String.valueOf(clusterInfo.numNodes+1))).actionGet().isTimedOut());
             Assert.assertEquals(clusterInfo.numNodes+1, node.client().admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());    
         }
@@ -102,12 +98,9 @@ public class SlowIntegrationTests extends SingleClusterTest {
         Assert.assertEquals(ClusterHealthStatus.GREEN, clusterHelper.nodeClient().admin().cluster().health(new ClusterHealthRequest().waitForGreenStatus()).actionGet().getStatus());
     
         
-        final Settings tcSettings = Settings.builder()
+        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false) 
                 .put(minimumSecuritySettings(Settings.EMPTY).get(0))
                 .put("cluster.name", clusterInfo.clustername)
-                .put("node.data", false)
-                .put("node.master", false)
-                .put("node.ingest", false)
                 .put("path.data", "./target/data/" + clusterInfo.clustername + "/cert/data")
                 .put("path.logs", "./target/data/" + clusterInfo.clustername + "/cert/logs")
                 .put("path.home", "./target")
@@ -120,7 +113,7 @@ public class SlowIntegrationTests extends SingleClusterTest {
     
         log.debug("Start node client");
 
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class).start()) {
+        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class).start()) {
             Thread.sleep(10000);
             Assert.assertEquals(1, node.client().admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());    
         } catch (Exception e) {
@@ -136,12 +129,9 @@ public class SlowIntegrationTests extends SingleClusterTest {
         Assert.assertEquals(clusterInfo.numNodes, clusterHelper.nodeClient().admin().cluster().health(new ClusterHealthRequest().waitForGreenStatus()).actionGet().getNumberOfNodes());
         Assert.assertEquals(ClusterHealthStatus.GREEN, clusterHelper.nodeClient().admin().cluster().health(new ClusterHealthRequest().waitForGreenStatus()).actionGet().getStatus());
      
-        final Settings tcSettings = Settings.builder()
+        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false) 
                 .put(minimumSecuritySettings(Settings.EMPTY).get(0))
                 .put("cluster.name", clusterInfo.clustername)
-                .put("node.data", false)
-                .put("node.master", false)
-                .put("node.ingest", false)
                 .put("path.data", "./target/data/" + clusterInfo.clustername + "/cert/data")
                 .put("path.logs", "./target/data/" + clusterInfo.clustername + "/cert/logs")
                 .put("path.home", "./target")
@@ -154,7 +144,7 @@ public class SlowIntegrationTests extends SingleClusterTest {
     
         log.debug("Start node client");
         
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class).start()) {
+        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class).start()) {
             Thread.sleep(10000);
             Assert.assertEquals(1, node.client().admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());    
         } catch (Exception e) {

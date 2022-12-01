@@ -1,41 +1,41 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 package org.opensearch.security.ssl.transport;
 
-import org.opensearch.security.ssl.SecurityKeyStore;
-import org.opensearch.security.ssl.util.SSLConnectionTestUtil;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.ssl.SslHandler;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import org.opensearch.security.ssl.SecurityKeyStore;
+import org.opensearch.security.ssl.util.SSLConnectionTestUtil;
+
+import static org.opensearch.transport.NettyAllocator.getAllocator;
+
 public class DualModeSSLHandlerTests {
 
     public static final int TLS_MAJOR_VERSION = 3;
     public static final int TLS_MINOR_VERSION = 0;
+    private static final ByteBufAllocator ALLOCATOR = getAllocator();
 
     private SecurityKeyStore securityKeyStore;
     private ChannelPipeline pipeline;
@@ -56,8 +56,7 @@ public class DualModeSSLHandlerTests {
     public void testInvalidMessage() throws Exception {
         DualModeSSLHandler handler = new DualModeSSLHandler(securityKeyStore);
 
-        ByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
-        handler.decode(ctx, alloc.directBuffer(4), null);
+        handler.decode(ctx, ALLOCATOR.buffer(4), null);
         // ensure pipeline is not fetched and manipulated
         Mockito.verify(ctx, Mockito.times(0)).pipeline();
     }
@@ -66,8 +65,7 @@ public class DualModeSSLHandlerTests {
     public void testValidTLSMessage() throws Exception {
         DualModeSSLHandler handler = new DualModeSSLHandler(securityKeyStore, sslHandler);
 
-        ByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
-        ByteBuf buffer = alloc.directBuffer(6);
+        ByteBuf buffer = ALLOCATOR.buffer(6);
         buffer.writeByte(20);
         buffer.writeByte(TLS_MAJOR_VERSION);
         buffer.writeByte(TLS_MINOR_VERSION);
@@ -88,8 +86,7 @@ public class DualModeSSLHandlerTests {
     public void testNonTLSMessage() throws Exception {
         DualModeSSLHandler handler = new DualModeSSLHandler(securityKeyStore, sslHandler);
 
-        ByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
-        ByteBuf buffer = alloc.directBuffer(6);
+        ByteBuf buffer = ALLOCATOR.buffer(6);
 
         for (int i = 0; i < 6; i++) {
             buffer.writeByte(1);
@@ -110,8 +107,7 @@ public class DualModeSSLHandlerTests {
         Mockito.when(ctx.writeAndFlush(Mockito.any())).thenReturn(channelFuture);
         Mockito.when(channelFuture.addListener(Mockito.any())).thenReturn(channelFuture);
 
-        ByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
-        ByteBuf buffer = alloc.directBuffer(6);
+        ByteBuf buffer = ALLOCATOR.buffer(6);
         buffer.writeCharSequence(SSLConnectionTestUtil.DUAL_MODE_CLIENT_HELLO_MSG, StandardCharsets.UTF_8);
 
         DualModeSSLHandler handler = new DualModeSSLHandler(securityKeyStore, sslHandler);

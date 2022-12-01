@@ -1,20 +1,17 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.dlsfls;
 
+<<<<<<< HEAD
 import com.google.common.collect.ImmutableMap;
 import org.apache.http.HttpStatus;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
@@ -26,20 +23,30 @@ import org.opensearch.client.transport.TransportClient;
 import org.opensearch.common.Strings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentType;
+=======
+import org.apache.hc.core5.http.HttpStatus;
+>>>>>>> origin/main
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.support.WriteRequest.RefreshPolicy;
+import org.opensearch.client.Client;
+import org.opensearch.common.Strings;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 public class DlsTest extends AbstractDlsFlsTest{
 
 
     @Override
-    protected void populateData(TransportClient tc) {
+    protected void populateData(Client tc) {
 
-        tc.index(new IndexRequest("deals").type("deals").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+        tc.index(new IndexRequest("deals").id("0").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                 .source("{\"amount\": 10}", XContentType.JSON)).actionGet();
-        tc.index(new IndexRequest("deals").type("deals").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
+        tc.index(new IndexRequest("deals").id("1").setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                 .source("{\"amount\": 1500}", XContentType.JSON)).actionGet();
 
         try {
@@ -86,10 +93,10 @@ public class DlsTest extends AbstractDlsFlsTest{
         setup();
 
         HttpResponse res;
-        res = rh.executeGetRequest("/deals/deals/0/_termvectors?pretty=true", encodeBasicHeader("dept_manager", "password"));
+        res = rh.executeGetRequest("/deals/_termvectors/0?pretty=true", encodeBasicHeader("dept_manager", "password"));
         Assert.assertTrue(res.getBody().contains("\"found\" : false"));
 
-        res = rh.executeGetRequest("/deals/deals/0/_termvectors?pretty=true", encodeBasicHeader("admin", "admin"));
+        res = rh.executeGetRequest("/deals/_termvectors/0?pretty=true", encodeBasicHeader("admin", "admin"));
         Assert.assertTrue(res.getBody().contains("\"found\" : true"));
     }
 
@@ -164,13 +171,13 @@ public class DlsTest extends AbstractDlsFlsTest{
         Assert.assertTrue(res.getBody().contains("\"value\" : 0,\n      \"relation"));
         Assert.assertTrue(res.getBody().contains("\"failed\" : 0"));
 
-        res = rh.executeGetRequest("/deals/deals/0?pretty", encodeBasicHeader("dept_manager", "password"));
+        res = rh.executeGetRequest("/deals/_doc/0?pretty", encodeBasicHeader("dept_manager", "password"));
         Assert.assertTrue(res.getBody().contains("\"found\" : false"));
 
-        res = rh.executeGetRequest("/deals/deals/0?realtime=true&pretty", encodeBasicHeader("dept_manager", "password"));
+        res = rh.executeGetRequest("/deals/_doc/0?realtime=true&pretty", encodeBasicHeader("dept_manager", "password"));
         Assert.assertTrue(res.getBody().contains("\"found\" : false"));
 
-        res = rh.executeGetRequest("/deals/deals/1?pretty", encodeBasicHeader("dept_manager", "password"));
+        res = rh.executeGetRequest("/deals/_doc/1?pretty", encodeBasicHeader("dept_manager", "password"));
         Assert.assertTrue(res.getBody().contains("\"found\" : true"));
 
         Assert.assertEquals(HttpStatus.SC_OK, (res = rh.executeGetRequest("/deals/_count?pretty", encodeBasicHeader("admin", "admin"))).getStatusCode());
@@ -185,9 +192,9 @@ public class DlsTest extends AbstractDlsFlsTest{
         //mget
         //msearch
         String msearchBody =
-                "{\"index\":\"deals\", \"type\":\"deals\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"deals\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator()+
-                "{\"index\":\"deals\", \"type\":\"deals\", \"ignore_unavailable\": true}"+System.lineSeparator()+
+                "{\"index\":\"deals\", \"ignore_unavailable\": true}"+System.lineSeparator()+
                 "{\"size\":10, \"query\":{\"bool\":{\"must\":{\"match_all\":{}}}}}"+System.lineSeparator();
 
 
@@ -202,12 +209,10 @@ public class DlsTest extends AbstractDlsFlsTest{
                 "\"docs\" : ["+
                     "{"+
                          "\"_index\" : \"deals\","+
-                        "\"_type\" : \"deals\","+
                         "\"_id\" : \"1\""+
                    " },"+
                    " {"+
                        "\"_index\" : \"deals\","+
-                       " \"_type\" : \"deals\","+
                        " \"_id\" : \"2\""+
                     "}"+
                 "]"+
@@ -265,10 +270,10 @@ public class DlsTest extends AbstractDlsFlsTest{
         Assert.assertTrue(res.getBody().contains("\"value\" : 1,\n      \"relation"));
         Assert.assertTrue(res.getBody().contains("\"failed\" : 0"));
 
-        res = rh.executeGetRequest("/deals/deals/0?pretty", encodeBasicHeader("admin", "admin"));
+        res = rh.executeGetRequest("/deals/_doc/0?pretty", encodeBasicHeader("admin", "admin"));
         Assert.assertTrue(res.getBody().contains("\"found\" : true"));
 
-        res = rh.executeGetRequest("/deals/deals/0?pretty", encodeBasicHeader("dept_manager", "password"));
+        res = rh.executeGetRequest("/deals/_doc/0?pretty", encodeBasicHeader("dept_manager", "password"));
         Assert.assertTrue(res.getBody().contains("\"found\" : false"));
     }
 
@@ -276,8 +281,13 @@ public class DlsTest extends AbstractDlsFlsTest{
     public void testDlsWithMinDocCountZeroAggregations() throws Exception {
         setup();
 
+<<<<<<< HEAD
         try (Client client = getInternalTransportClient(this.clusterInfo, Settings.EMPTY)) {
             client.admin().indices().create(new CreateIndexRequest("logs").mapping("_doc", ImmutableMap.of("properties", ImmutableMap.of("termX", ImmutableMap.of("type", "keyword"))))).actionGet();
+=======
+        try (Client client = getClient()) {
+            client.admin().indices().create(new CreateIndexRequest("logs").simpleMapping("termX", "type=keyword")).actionGet();
+>>>>>>> origin/main
 
             for (int i = 0; i < 3; i++) {
                 client.index(new IndexRequest("logs").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("amount", i, "termX", "A", "timestamp", "2022-01-06T09:05:00Z")).actionGet();
@@ -375,7 +385,11 @@ public class DlsTest extends AbstractDlsFlsTest{
 
         // Significant Text Aggregation is not impacted.
         // Non-admin user with setting "min_doc_count=0". Expected to only have access to buckets for dept_manager".
+<<<<<<< HEAD
         String query3 = "{\"aggregations\":{\"significant_termX\":{\"significant_terms\":{\"field\":\"termX.keyword\",\"min_doc_count\":0}}}}";
+=======
+        String query3 = "{\"size\":100,\"aggregations\":{\"significant_termX\":{\"significant_terms\":{\"field\":\"termX.keyword\",\"min_doc_count\":0}}}}";
+>>>>>>> origin/main
         HttpResponse response5 = rh.executePostRequest("logs*/_search", query3, encodeBasicHeader("dept_manager", "password"));
 
         Assert.assertEquals(HttpStatus.SC_OK, response5.getStatusCode());
@@ -386,7 +400,11 @@ public class DlsTest extends AbstractDlsFlsTest{
         Assert.assertFalse(response5.getBody(), response5.getBody().contains("\"termX\":\"E\""));
 
         // Non-admin user without setting "min_doc_count". Expected to only have access to buckets for dept_manager".
+<<<<<<< HEAD
         String query4 = "{\"aggregations\":{\"significant_termX\":{\"significant_terms\":{\"field\":\"termX.keyword\"}}}}";
+=======
+        String query4 = "{\"size\":100,\"aggregations\":{\"significant_termX\":{\"significant_terms\":{\"field\":\"termX.keyword\"}}}}";
+>>>>>>> origin/main
 
         HttpResponse response6 = rh.executePostRequest("logs*/_search", query4, encodeBasicHeader("dept_manager", "password"));
 
@@ -419,7 +437,11 @@ public class DlsTest extends AbstractDlsFlsTest{
 
         // Histogram Aggregation is not impacted.
         // Non-admin user with setting "min_doc_count=0". Expected to only have access to buckets for dept_manager".
+<<<<<<< HEAD
         String query5 = "{\"aggs\":{\"amount\":{\"histogram\":{\"field\":\"amount\",\"interval\":1,\"min_doc_count\":0}}}}";
+=======
+        String query5 = "{\"size\":100,\"aggs\":{\"amount\":{\"histogram\":{\"field\":\"amount\",\"interval\":1,\"min_doc_count\":0}}}}";
+>>>>>>> origin/main
 
         HttpResponse response9 = rh.executePostRequest("logs*/_search", query5, encodeBasicHeader("dept_manager", "password"));
 
@@ -431,7 +453,11 @@ public class DlsTest extends AbstractDlsFlsTest{
         Assert.assertFalse(response9.getBody(), response9.getBody().contains("\"termX\":\"E\""));
 
         // Non-admin user without setting "min_doc_count". Expected to only have access to buckets for dept_manager".
+<<<<<<< HEAD
         String query6 = "{\"aggs\":{\"amount\":{\"histogram\":{\"field\":\"amount\",\"interval\":1}}}}";
+=======
+        String query6 = "{\"size\":100,\"aggs\":{\"amount\":{\"histogram\":{\"field\":\"amount\",\"interval\":1}}}}";
+>>>>>>> origin/main
 
         HttpResponse response10 = rh.executePostRequest("logs*/_search", query6, encodeBasicHeader("dept_manager", "password"));
 
@@ -465,7 +491,11 @@ public class DlsTest extends AbstractDlsFlsTest{
 
         // Date Histogram Aggregation is not impacted.
         // Non-admin user with setting "min_doc_count=0". Expected to only have access to buckets for dept_manager".
+<<<<<<< HEAD
         String query7 = "{\"aggs\":{\"timestamp\":{\"date_histogram\":{\"field\":\"timestamp\",\"calendar_interval\":\"month\",\"min_doc_count\":0}}}}";
+=======
+        String query7 = "{\"size\":100,\"aggs\":{\"timestamp\":{\"date_histogram\":{\"field\":\"timestamp\",\"calendar_interval\":\"month\",\"min_doc_count\":0}}}}";
+>>>>>>> origin/main
 
         HttpResponse response13 = rh.executePostRequest("logs*/_search", query7, encodeBasicHeader("dept_manager", "password"));
 
@@ -477,7 +507,11 @@ public class DlsTest extends AbstractDlsFlsTest{
         Assert.assertFalse(response13.getBody(), response13.getBody().contains("\"termX\":\"E\""));
 
         // Non-admin user without setting "min_doc_count". Expected to only have access to buckets for dept_manager".
+<<<<<<< HEAD
         String query8 = "{\"aggs\":{\"timestamp\":{\"date_histogram\":{\"field\":\"timestamp\",\"calendar_interval\":\"month\"}}}}";
+=======
+        String query8 = "{\"size\":100,\"aggs\":{\"timestamp\":{\"date_histogram\":{\"field\":\"timestamp\",\"calendar_interval\":\"month\"}}}}";
+>>>>>>> origin/main
 
         HttpResponse response14 = rh.executePostRequest("logs*/_search", query8, encodeBasicHeader("dept_manager", "password"));
 
@@ -508,4 +542,8 @@ public class DlsTest extends AbstractDlsFlsTest{
         Assert.assertTrue(response16.getBody(), response16.getBody().contains("\"termX\":\"D\""));
         Assert.assertTrue(response16.getBody(), response16.getBody().contains("\"termX\":\"E\""));
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

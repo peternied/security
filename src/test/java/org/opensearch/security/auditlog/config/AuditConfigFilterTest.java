@@ -1,40 +1,43 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.auditlog.config;
 
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+
+import com.google.common.collect.ImmutableSet;
+import org.junit.Test;
+
+import org.opensearch.common.settings.Settings;
+import org.opensearch.security.auditlog.config.AuditConfig.Filter.FilterEntries;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
-import org.opensearch.common.settings.Settings;
-import org.junit.Test;
 
-import java.util.Collections;
-import java.util.EnumSet;
-
-import static org.opensearch.security.auditlog.impl.AuditCategory.AUTHENTICATED;
-import static org.opensearch.security.auditlog.impl.AuditCategory.GRANTED_PRIVILEGES;
-import static org.opensearch.security.auditlog.impl.AuditCategory.BAD_HEADERS;
-import static org.opensearch.security.auditlog.impl.AuditCategory.SSL_EXCEPTION;
-import static org.opensearch.security.auditlog.impl.AuditCategory.FAILED_LOGIN;
-import static org.opensearch.security.auditlog.impl.AuditCategory.MISSING_PRIVILEGES;
-
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
+import static org.opensearch.security.auditlog.impl.AuditCategory.AUTHENTICATED;
+import static org.opensearch.security.auditlog.impl.AuditCategory.BAD_HEADERS;
+import static org.opensearch.security.auditlog.impl.AuditCategory.FAILED_LOGIN;
+import static org.opensearch.security.auditlog.impl.AuditCategory.GRANTED_PRIVILEGES;
+import static org.opensearch.security.auditlog.impl.AuditCategory.MISSING_PRIVILEGES;
+import static org.opensearch.security.auditlog.impl.AuditCategory.SSL_EXCEPTION;
 
 public class AuditConfigFilterTest {
 
@@ -125,5 +128,104 @@ public class AuditConfigFilterTest {
         assertSame(WildcardMatcher.NONE, auditConfigFilter.getIgnoredAuditUsersMatcher());
         assertTrue(auditConfigFilter.getDisabledRestCategories().isEmpty());
         assertTrue(auditConfigFilter.getDisabledTransportCategories().isEmpty());
+    }
+
+
+    @Test
+    public void testFilterEntries() {
+        assertThat(FilterEntries.ENABLE_REST.getKey(), equalTo("enable_rest"));
+        assertThat(FilterEntries.ENABLE_REST.getKeyWithNamespace(), equalTo("plugins.security.audit.config.enable_rest"));
+        assertThat(FilterEntries.ENABLE_REST.getLegacyKeyWithNamespace(), equalTo("opendistro_security.audit.enable_rest"));
+    }
+
+    @Test
+    public void fromSettingBoolean() {
+        final FilterEntries entry = FilterEntries.ENABLE_REST;
+
+        // Use primary key
+        final Settings settings1 = Settings.builder()
+            .put(entry.getKeyWithNamespace(), false)
+            .put(entry.getLegacyKeyWithNamespace(), true)
+            .build();
+         assertThat(AuditConfig.Filter.fromSettingBoolean(settings1, entry, true), equalTo(false));
+
+        // Use fallback key
+        final Settings settings2 = Settings.builder()
+            .put(entry.getLegacyKeyWithNamespace(), false)
+            .build();
+         assertThat(AuditConfig.Filter.fromSettingBoolean(settings2, entry, true), equalTo(false));
+
+        // Use default
+         assertThat(AuditConfig.Filter.fromSettingBoolean(Settings.builder().build(), entry, true), equalTo(true));
+    }
+
+    @Test
+    public void fromSettingStringSet() {
+        final FilterEntries entry = FilterEntries.IGNORE_USERS;
+
+        // Use primary key
+        final Settings settings1 = Settings.builder()
+                .putList(entry.getKeyWithNamespace(), "abc")
+                .putList(entry.getLegacyKeyWithNamespace(), "def")
+                .build();
+        assertThat(AuditConfig.Filter.fromSettingStringSet(settings1, entry, List.of("xyz")), equalTo(ImmutableSet.of("abc")));
+
+        // Use fallback key
+        final Settings settings2 = Settings.builder()
+                .putList(entry.getLegacyKeyWithNamespace(), "def")
+                .build();
+        assertThat(AuditConfig.Filter.fromSettingStringSet(settings2, entry, List.of("xyz")), equalTo(ImmutableSet.of("def")));
+
+        // Use default
+        assertThat(AuditConfig.Filter.fromSettingStringSet(Settings.builder().build(), entry, List.of("xyz")), equalTo(ImmutableSet.of("xyz")));
+    }
+
+    @Test
+    public void fromSettingParseAuditCategory() {
+        final FilterEntries entry = FilterEntries.DISABLE_REST_CATEGORIES;
+        final Function<Settings, Set<AuditCategory>> parse = (settings) ->
+                AuditCategory.parse(AuditConfig.Filter.fromSettingStringSet(settings, entry, ConfigConstants.OPENDISTRO_SECURITY_AUDIT_DISABLED_CATEGORIES_DEFAULT));
+
+        final Settings noValues = Settings.builder().build();
+        assertThat(parse.apply(noValues), equalTo(ImmutableSet.of(AUTHENTICATED, GRANTED_PRIVILEGES)));
+
+        final Settings legacySettingNone = Settings.builder()
+                .put(entry.getLegacyKeyWithNamespace(), "NONE")
+                .build();
+        assertThat(parse.apply(legacySettingNone), equalTo(ImmutableSet.of()));
+
+        final Settings legacySettingValue = Settings.builder()
+                .put(entry.getLegacyKeyWithNamespace(), AUTHENTICATED.name())
+                .build();
+        assertThat(parse.apply(legacySettingValue), equalTo(ImmutableSet.of(AUTHENTICATED)));
+
+        final Settings legacySettingMultipleValues = Settings.builder()
+                .putList(entry.getLegacyKeyWithNamespace(), AUTHENTICATED.name(), BAD_HEADERS.name())
+                .build();
+        assertThat(parse.apply(legacySettingMultipleValues), equalTo(ImmutableSet.of(AUTHENTICATED, BAD_HEADERS)));
+
+        final Settings settingNone = Settings.builder()
+                .put(entry.getKeyWithNamespace(), "NONE")
+                .put(entry.getLegacyKeyWithNamespace(), FAILED_LOGIN.name())
+                .build();
+        assertThat(parse.apply(settingNone), equalTo(ImmutableSet.of()));
+
+        final Settings settingValue = Settings.builder()
+                .put(entry.getKeyWithNamespace(), AUTHENTICATED.name())
+                .put(entry.getLegacyKeyWithNamespace(), FAILED_LOGIN.name())
+                .build();
+        assertThat(parse.apply(settingValue), equalTo(ImmutableSet.of(AUTHENTICATED)));
+
+        final Settings settingMultipleValues = Settings.builder()
+                .putList(entry.getKeyWithNamespace(), AUTHENTICATED.name(), BAD_HEADERS.name())
+                .put(entry.getLegacyKeyWithNamespace(), FAILED_LOGIN.name())
+                .build();
+        assertThat(parse.apply(settingMultipleValues), equalTo(ImmutableSet.of(AUTHENTICATED, BAD_HEADERS)));
+
+        final Settings settingMultipleValuesString = Settings.builder()
+                .put(entry.getKeyWithNamespace(), AUTHENTICATED.name() + "," + BAD_HEADERS.name())
+                .put(entry.getLegacyKeyWithNamespace(), FAILED_LOGIN.name())
+                .build();
+        assertThat(parse.apply(settingMultipleValues), equalTo(ImmutableSet.of(AUTHENTICATED, BAD_HEADERS)));
     }
 }

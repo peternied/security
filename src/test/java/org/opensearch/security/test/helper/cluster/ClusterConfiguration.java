@@ -14,18 +14,14 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.test.helper.cluster;
@@ -36,29 +32,29 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.opensearch.security.OpenSearchSecurityPlugin;
-import org.opensearch.index.reindex.ReindexPlugin;
-import org.opensearch.join.ParentJoinPlugin;
-import org.opensearch.percolator.PercolatorPlugin;
-import org.opensearch.plugins.Plugin;
-import org.opensearch.script.mustache.MustachePlugin;
-import org.opensearch.search.aggregations.matrix.MatrixAggregationPlugin;
-import org.opensearch.transport.Netty4Plugin;
-
-import org.opensearch.security.test.plugin.UserInjectorPlugin;
 import com.google.common.collect.Lists;
 
+import org.opensearch.index.reindex.ReindexModulePlugin;
+import org.opensearch.join.ParentJoinModulePlugin;
+import org.opensearch.percolator.PercolatorModulePlugin;
+import org.opensearch.plugins.Plugin;
+import org.opensearch.script.mustache.MustacheModulePlugin;
+import org.opensearch.search.aggregations.matrix.MatrixAggregationModulePlugin;
+import org.opensearch.security.OpenSearchSecurityPlugin;
+import org.opensearch.security.test.plugin.UserInjectorPlugin;
+import org.opensearch.transport.Netty4ModulePlugin;
+
 public enum ClusterConfiguration {
-	//first one needs to be a master
+	//first one needs to be a cluster manager
     //HUGE(new NodeSettings(true, false, false), new NodeSettings(true, false, false), new NodeSettings(true, false, false), new NodeSettings(false, true,false), new NodeSettings(false, true, false)),
 	
     //3 nodes (1m, 2d)
     DEFAULT(new NodeSettings(true, false), new NodeSettings(false, true), new NodeSettings(false, true)),
 
 	//2 nodes (1m, 3d)
-	ONE_MASTER_THREE_DATA(new NodeSettings(true, false), new NodeSettings(false, true), new NodeSettings(false, true), new NodeSettings(false, true)),
+	ONE_CLUSTER_MANAGER_THREE_DATA(new NodeSettings(true, false), new NodeSettings(false, true), new NodeSettings(false, true), new NodeSettings(false, true)),
 
-	DEFAULT_MASTER_WITHOUT_SECURITY_PLUGIN(new NodeSettings(true, false)
+	DEFAULT_CLUSTER_MANAGER_WITHOUT_SECURITY_PLUGIN(new NodeSettings(true, false)
 			.removePluginIfPresent(OpenSearchSecurityPlugin.class)
 			, new NodeSettings(false, true)
 			, new NodeSettings(false, true)),
@@ -86,20 +82,20 @@ public enum ClusterConfiguration {
 		return Collections.unmodifiableList(nodeSettings);
 	}
 	
-	public  List<NodeSettings> getMasterNodeSettings() {
-        return Collections.unmodifiableList(nodeSettings.stream().filter(a->a.masterNode).collect(Collectors.toList()));
+	public  List<NodeSettings> getClusterManagerNodeSettings() {
+        return Collections.unmodifiableList(nodeSettings.stream().filter(a->a.clusterManagerNode).collect(Collectors.toList()));
     }
 	
-	public  List<NodeSettings> getNonMasterNodeSettings() {
-        return Collections.unmodifiableList(nodeSettings.stream().filter(a->!a.masterNode).collect(Collectors.toList()));
+	public  List<NodeSettings> getNonClusterManagerNodeSettings() {
+        return Collections.unmodifiableList(nodeSettings.stream().filter(a->!a.clusterManagerNode).collect(Collectors.toList()));
     }
 	
 	public int getNodes() {
         return nodeSettings.size();
     }
 	
-	public int getMasterNodes() {
-        return (int) nodeSettings.stream().filter(a->a.masterNode).count();
+	public int getClusterManagerNodes() {
+        return (int) nodeSettings.stream().filter(a->a.clusterManagerNode).count();
     }
 	
 	public int getDataNodes() {
@@ -107,22 +103,22 @@ public enum ClusterConfiguration {
     }
 	
 	public int getClientNodes() {
-        return (int) nodeSettings.stream().filter(a->!a.masterNode && !a.dataNode).count();
+        return (int) nodeSettings.stream().filter(a->!a.clusterManagerNode && !a.dataNode).count();
     }
 	
 	public static class NodeSettings {
-		public boolean masterNode;
+		public boolean clusterManagerNode;
 		public boolean dataNode;
-		public List<Class<? extends Plugin>> plugins = Lists.newArrayList(Netty4Plugin.class, OpenSearchSecurityPlugin.class, MatrixAggregationPlugin.class, MustachePlugin.class, ParentJoinPlugin.class, PercolatorPlugin.class, ReindexPlugin.class);
+		public List<Class<? extends Plugin>> plugins = Lists.newArrayList(Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class, MatrixAggregationModulePlugin.class, MustacheModulePlugin.class, ParentJoinModulePlugin.class, PercolatorModulePlugin.class, ReindexModulePlugin.class);
 		
-		public NodeSettings(boolean masterNode, boolean dataNode) {
+		public NodeSettings(boolean clusterManagerNode, boolean dataNode) {
 			super();
-			this.masterNode = masterNode;
+			this.clusterManagerNode = clusterManagerNode;
 			this.dataNode = dataNode;
 		}
         
-		public NodeSettings(boolean masterNode, boolean dataNode, List<Class<? extends Plugin>> additionalPlugins) {
-            this(masterNode, dataNode);
+		public NodeSettings(boolean clusterManagerNode, boolean dataNode, List<Class<? extends Plugin>> additionalPlugins) {
+            this(clusterManagerNode, dataNode);
             this.plugins.addAll(additionalPlugins);
         }
 

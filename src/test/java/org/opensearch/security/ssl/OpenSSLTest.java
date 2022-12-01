@@ -21,20 +21,8 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import org.opensearch.security.OpenSearchSecurityPlugin;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.util.internal.PlatformDependent;
-import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
-import org.opensearch.action.admin.cluster.health.ClusterHealthResponse;
-import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.unit.TimeValue;
-import org.opensearch.node.Node;
-import org.opensearch.node.PluginAwareNode;
-import org.opensearch.security.ssl.util.SSLConfigConstants;
-import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.security.test.helper.rest.RestHelper;
-import org.opensearch.transport.Netty4Plugin;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -42,7 +30,20 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import io.netty.handler.ssl.OpenSsl;
+import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
+import org.opensearch.action.admin.cluster.health.ClusterHealthResponse;
+import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.node.Node;
+import org.opensearch.node.PluginAwareNode;
+import org.opensearch.security.OpenSearchSecurityPlugin;
+import org.opensearch.security.ssl.util.SSLConfigConstants;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.test.AbstractSecurityUnitTest;
+import org.opensearch.security.test.helper.file.FileHelper;
+import org.opensearch.security.test.helper.rest.RestHelper;
+import org.opensearch.transport.Netty4ModulePlugin;
 
 public class OpenSSLTest extends SSLTest {
     private static final String USE_NETTY_DEFAULT_ALLOCATOR_PROPERTY = "opensearch.unsafe.use_netty_default_allocator";
@@ -65,21 +66,8 @@ public class OpenSSLTest extends SSLTest {
 
     @Before
     public void setup() {
+        Assume.assumeFalse(PlatformDependent.isWindows());
         allowOpenSSL = true;
-    }
-
-    @Test
-    public void testEnsureOpenSSLAvailability() {
-        //Assert.assertTrue("OpenSSL not available: "+String.valueOf(OpenSsl.unavailabilityCause()), OpenSsl.isAvailable());
-                
-        final String openSSLOptional = System.getenv("OPENDISTRO_SECURITY_TEST_OPENSSL_OPT");
-        System.out.println("OPENDISTRO_SECURITY_TEST_OPENSSL_OPT "+openSSLOptional);
-        if(!Boolean.parseBoolean(openSSLOptional)) {
-            System.out.println("OpenSSL must be available");
-            Assert.assertTrue("OpenSSL not available: "+String.valueOf(OpenSsl.unavailabilityCause()), OpenSsl.isAvailable());
-        } else {
-            System.out.println("OpenSSL can be available");
-        }
     }
 
     @Override
@@ -117,25 +105,12 @@ public class OpenSSLTest extends SSLTest {
         super.testHttpsV3Fail();
     }
 
-    @Override
-    @Test(timeout=40000)
-    public void testTransportClientSSL() throws Exception {
-        Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
-        super.testTransportClientSSL();
-    }
 
     @Override
     @Test(timeout=40000)
     public void testNodeClientSSL() throws Exception {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
         super.testNodeClientSSL();
-    }
-
-    @Override
-    @Test(timeout=40000)
-    public void testTransportClientSSLFail() throws Exception {
-        Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
-        super.testTransportClientSSLFail();
     }
     
     @Override
@@ -187,7 +162,7 @@ public class OpenSSLTest extends SSLTest {
     @Test
     public void testHttpsAndNodeSSLPem() throws Exception {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
-        super.testHttpsAndNodeSSLPem();
+        super.testHttpsAndNodeSSLPKCS8Pem();
     }
     
     @Test
@@ -219,11 +194,9 @@ public class OpenSSLTest extends SSLTest {
         
         RestHelper rh = nonSslRestHelper();
 
-        final Settings tcSettings = Settings.builder().put("cluster.name", clusterInfo.clustername).put("path.home", "/tmp")
+        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false) 
+                .put("cluster.name", clusterInfo.clustername).put("path.home", "/tmp")
                 .put("node.name", "client_node_" + new Random().nextInt())
-                .put("node.data", false)
-                .put("node.master", false)
-                .put("node.ingest", false)
                 .put("path.data", "./target/data/" + clusterInfo.clustername + "/ssl/data")
                 .put("path.logs", "./target/data/" + clusterInfo.clustername + "/ssl/logs")
                 .put("path.home", "./target")
@@ -232,7 +205,7 @@ public class OpenSSLTest extends SSLTest {
                 .put(settings)// -----
                 .build();
 
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class).start()) {
+        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class).start()) {
             ClusterHealthResponse res = node.client().admin().cluster().health(new ClusterHealthRequest().waitForNodes("4").timeout(TimeValue.timeValueSeconds(5))).actionGet();
             Assert.assertFalse(res.isTimedOut());
             Assert.assertEquals(4, res.getNumberOfNodes());

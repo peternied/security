@@ -1,7 +1,20 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
+
 package org.opensearch.security;
 
+import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Test;
+
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
@@ -10,15 +23,13 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.rest.RestHelper;
 
-import com.google.common.collect.ImmutableMap;
-
 public class PrivilegesEvaluationTest extends SingleClusterTest {
     @Test
     public void resolveTestHidden() throws Exception {
 
         setup();
 
-        try (Client client = getInternalTransportClient()) {
+        try (Client client = getClient()) {
 
             client.index(new IndexRequest("hidden_test_not_hidden").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source(XContentType.JSON, "index",
                     "hidden_test_not_hidden", "b", "y", "date", "1985/01/01")).actionGet();

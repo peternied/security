@@ -14,34 +14,30 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.test;
 
-import org.opensearch.security.OpenSearchSecurityPlugin;
-import io.netty.handler.ssl.OpenSsl;
-
-import java.net.InetSocketAddress;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.security.KeyStore;
 import java.util.Base64;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+<<<<<<< HEAD
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
 import org.apache.logging.log4j.Logger;
@@ -68,16 +64,74 @@ import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import org.opensearch.security.test.helper.rules.SecurityTestWatcher;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.Netty4Plugin;
+=======
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+
+import com.carrotsearch.randomizedtesting.RandomizedTest;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import io.netty.handler.ssl.OpenSsl;
+import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.nio.AsyncClientConnectionManager;
+import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.core5.function.Factory;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.message.BasicHeader;
+import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
+import org.apache.hc.core5.reactor.ssl.TlsDetails;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
+import org.apache.hc.core5.ssl.SSLContexts;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+>>>>>>> origin/main
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 import org.junit.rules.TestWatcher;
 
+import org.opensearch.OpenSearchSecurityException;
+import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
+import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
+import org.opensearch.client.Client;
+import org.opensearch.client.RestClient;
+import org.opensearch.client.RestClientBuilder;
+import org.opensearch.client.RestHighLevelClient;
+import org.opensearch.cluster.node.DiscoveryNodeRole;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.security.action.configupdate.ConfigUpdateAction;
+import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
+import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
 import org.opensearch.security.securityconf.impl.CType;
+import org.opensearch.security.ssl.util.SSLConfigConstants;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.support.WildcardMatcher;
+import org.opensearch.security.test.helper.cluster.ClusterHelper;
+import org.opensearch.security.test.helper.cluster.ClusterInfo;
+import org.opensearch.security.test.helper.file.FileHelper;
+import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
+import org.opensearch.security.test.helper.rules.SecurityTestWatcher;
+import org.opensearch.threadpool.ThreadPool;
 
-public abstract class AbstractSecurityUnitTest {
+/*
+ * There are real thread leaks during test execution, not all threads are 
+ * properly waited on or interrupted.  While this normally doesn't create test
+ * failures, retries mitigate this.  Remove this attribute to explore these
+ * issues.
+ */ 
+@ThreadLeakScope(Scope.NONE)
+public abstract class AbstractSecurityUnitTest extends RandomizedTest {
 
+    private static final String NODE_ROLE_KEY = "node.roles";
     protected static final AtomicLong num = new AtomicLong();
     protected static boolean withRemoteCluster;
 
@@ -118,71 +172,111 @@ public abstract class AbstractSecurityUnitTest {
                 (username + ":" + Objects.requireNonNull(password)).getBytes(StandardCharsets.UTF_8)));
     }
 
-    protected static class TransportClientImpl extends TransportClient {
-
-        public TransportClientImpl(Settings settings, Collection<Class<? extends Plugin>> plugins) {
-            super(settings, plugins);
-        }
-
-        public TransportClientImpl(Settings settings, Settings defaultSettings, Collection<Class<? extends Plugin>> plugins) {
-            super(settings, defaultSettings, plugins, null);
-        }
-    }
-
-    @SafeVarargs
-    protected static Collection<Class<? extends Plugin>> asCollection(Class<? extends Plugin>... plugins) {
-        return Arrays.asList(plugins);
-    }
-
-
-    protected TransportClient getInternalTransportClient(ClusterInfo info, Settings initTransportClientSettings) {
-
+    protected RestHighLevelClient getRestClient(ClusterInfo info, String keyStoreName, String trustStoreName) {
         final String prefix = getResourceFolder()==null?"":getResourceFolder()+"/";
 
-        Settings tcSettings = Settings.builder()
-                .put("cluster.name", info.clustername)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_TRUSTSTORE_FILEPATH,
-                        FileHelper.getAbsoluteFilePathFromClassPath(prefix+"truststore.jks"))
-                .put("plugins.security.ssl.transport.enforce_hostname_verification", false)
-                .put("plugins.security.ssl.transport.keystore_filepath",
-                        FileHelper.getAbsoluteFilePathFromClassPath(prefix+"kirk-keystore.jks"))
-                .put(initTransportClientSettings)
-                .build();
+        try {
+            SSLContextBuilder sslContextBuilder = SSLContexts.custom();
+            File keyStoreFile = FileHelper.getAbsoluteFilePathFromClassPath(prefix + keyStoreName).toFile();
+            KeyStore keyStore = KeyStore.getInstance(keyStoreName.endsWith(".jks")?"JKS":"PKCS12");
+            keyStore.load(new FileInputStream(keyStoreFile), null);
+            sslContextBuilder.loadKeyMaterial(keyStore, "changeit".toCharArray());
 
-        TransportClient tc = new TransportClientImpl(tcSettings, asCollection(Netty4Plugin.class, OpenSearchSecurityPlugin.class));
-        tc.addTransportAddress(new TransportAddress(new InetSocketAddress(info.nodeHost, info.nodePort)));
-        return tc;
+            KeyStore trustStore = KeyStore.getInstance(trustStoreName.endsWith(".jks")?"JKS":"PKCS12");
+            File trustStoreFile = FileHelper.getAbsoluteFilePathFromClassPath(prefix + trustStoreName).toFile();
+            trustStore.load(new FileInputStream(trustStoreFile),
+                    "changeit".toCharArray());
+
+            sslContextBuilder.loadTrustMaterial(trustStore, null);
+            SSLContext sslContext = sslContextBuilder.build();
+
+            HttpHost httpHost = new HttpHost("https", info.httpHost, info.httpPort);
+
+            RestClientBuilder restClientBuilder = RestClient.builder(httpHost)
+                    .setHttpClientConfigCallback(
+                            builder -> {
+                                TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
+                                        .setSslContext(sslContext)
+                                        .setTlsVersions(new String[] { "TLSv1", "TLSv1.1", "TLSv1.2", "SSLv3"})
+                                        .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                                        // See please https://issues.apache.org/jira/browse/HTTPCLIENT-2219
+                                        .setTlsDetailsFactory(new Factory<SSLEngine, TlsDetails>() {
+                                            @Override
+                                            public TlsDetails create(final SSLEngine sslEngine) {
+                                                return new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol());
+                                            }
+                                        })
+                                        .build();
+
+                                final AsyncClientConnectionManager cm = PoolingAsyncClientConnectionManagerBuilder.create()
+                                        .setTlsStrategy(tlsStrategy)
+                                        .build();
+                                builder.setConnectionManager(cm);
+                                return builder;
+                            });
+            return new RestHighLevelClient(restClientBuilder);
+        } catch (Exception e) {
+            log.error("Cannot create client", e);
+            throw new RuntimeException("Cannot create client", e);
+        }
     }
 
-    protected TransportClient getUserTransportClient(ClusterInfo info, String keyStore, Settings initTransportClientSettings) {
-
-        final String prefix = getResourceFolder()==null?"":getResourceFolder()+"/";
-
-        Settings tcSettings = Settings.builder()
-                .put("cluster.name", info.clustername)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_TRUSTSTORE_FILEPATH,
-                        FileHelper.getAbsoluteFilePathFromClassPath(prefix+"truststore.jks"))
-                .put("plugins.security.ssl.transport.enforce_hostname_verification", false)
-                .put("plugins.security.ssl.transport.keystore_filepath",
-                        FileHelper.getAbsoluteFilePathFromClassPath(prefix+keyStore))
-                .put(initTransportClientSettings)
-                .build();
-
-        TransportClient tc = new TransportClientImpl(tcSettings, asCollection(Netty4Plugin.class, OpenSearchSecurityPlugin.class));
-        tc.addTransportAddress(new TransportAddress(new InetSocketAddress(info.nodeHost, info.nodePort)));
-        return tc;
+    /** Wait for the security plugin to load roles. */
+    public void waitForInit(Client client) {
+        int maxRetries = 5;
+        Optional<Exception> retainedException = Optional.empty();
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                client.admin().cluster().health(new ClusterHealthRequest()).actionGet();
+                retainedException = Optional.empty();
+                return;
+            } catch (OpenSearchSecurityException ex) {
+                if(ex.getMessage().contains("OpenSearch Security not initialized")) {
+                    retainedException = Optional.of(ex);
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) { /* ignored */ }
+                } else {
+                    // plugin is initialized, but another error received.
+                    // Example could be user does not have permissions for cluster:monitor/health
+                    retainedException = Optional.empty();
+                }
+            }
+        }
+        if (retainedException.isPresent()) {
+            throw new RuntimeException(retainedException.get());
+        }
     }
 
-    protected void initialize(ClusterInfo info, Settings initTransportClientSettings, DynamicSecurityConfig securityConfig) {
+    public static Settings.Builder nodeRolesSettings(final Settings.Builder settingsBuilder, final boolean isClusterManager, final boolean isDataNode) {
+        final ImmutableList.Builder<String> nodeRolesBuilder = ImmutableList.<String>builder();
+        if (isDataNode) {
+            nodeRolesBuilder.add(DiscoveryNodeRole.DATA_ROLE.roleName());
+        }
+        if (isClusterManager) {
+            nodeRolesBuilder.add(DiscoveryNodeRole.CLUSTER_MANAGER_ROLE.roleName());
+        }
 
-        try (TransportClient tc = getInternalTransportClient(info, initTransportClientSettings)) {
+        final Settings nodeRoleSettings = Settings.builder().putList(NODE_ROLE_KEY, nodeRolesBuilder.build()).build();
+        return mergeNodeRolesAndSettings(settingsBuilder, nodeRoleSettings);
+    }
 
-            tc.addTransportAddress(new TransportAddress(new InetSocketAddress(info.nodeHost, info.nodePort)));
-            Assert.assertEquals(info.numNodes,
+    public static Settings.Builder mergeNodeRolesAndSettings(final Settings.Builder settingsBuilder, final Settings otherSettings) {
+        final ImmutableSet.Builder<String> originalRoles = ImmutableSet.<String>builder()
+            .addAll(settingsBuilder.build().getAsList(NODE_ROLE_KEY, ImmutableList.<String>of()))
+            .addAll(otherSettings.getAsList(NODE_ROLE_KEY, ImmutableList.<String>of()));
+
+        return settingsBuilder.put(otherSettings)
+            .putList(NODE_ROLE_KEY, originalRoles.build().asList());
+    }
+
+    protected void initialize(ClusterHelper clusterHelper, ClusterInfo clusterInfo, DynamicSecurityConfig securityConfig) throws IOException {
+        try (Client tc = clusterHelper.nodeClient()) {
+            Assert.assertEquals(clusterInfo.numNodes,
                     tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
 
             try {
-                tc.admin().indices().create(new CreateIndexRequest("security")).actionGet();
+                tc.admin().indices().create(new CreateIndexRequest(".opendistro_security")).actionGet();
             } catch (Exception e) {
                 //ignore
             }
@@ -196,26 +290,10 @@ public abstract class AbstractSecurityUnitTest {
                     .execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(CType.lcStringValues().toArray(new String[0])))
                     .actionGet();
             Assert.assertFalse(cur.failures().toString(), cur.hasFailures());
-            Assert.assertEquals(info.numNodes, cur.getNodes().size());
+            Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
 
             SearchResponse sr = tc.search(new SearchRequest(".opendistro_security")).actionGet();
-            //Assert.assertEquals(5L, sr.getHits().getTotalHits());
-
             sr = tc.search(new SearchRequest(".opendistro_security")).actionGet();
-            //Assert.assertEquals(5L, sr.getHits().getTotalHits());
-
-            String type=securityConfig.getType();
-
-            Assert.assertTrue(tc.get(new GetRequest(".opendistro_security", type, "config")).actionGet().isExists());
-            Assert.assertTrue(tc.get(new GetRequest(".opendistro_security", type,"internalusers")).actionGet().isExists());
-            Assert.assertTrue(tc.get(new GetRequest(".opendistro_security", type,"roles")).actionGet().isExists());
-            Assert.assertTrue(tc.get(new GetRequest(".opendistro_security", type,"rolesmapping")).actionGet().isExists());
-            Assert.assertTrue(tc.get(new GetRequest(".opendistro_security", type,"actiongroups")).actionGet().isExists());
-            Assert.assertFalse(tc.get(new GetRequest(".opendistro_security", type,"rolesmapping_xcvdnghtu165759i99465")).actionGet().isExists());
-            Assert.assertTrue(tc.get(new GetRequest(".opendistro_security", type,"config")).actionGet().isExists());
-            if (indexRequests.stream().anyMatch(i -> CType.NODESDN.toLCString().equals(i.id()))) {
-                Assert.assertTrue(tc.get(new GetRequest(".opendistro_security", type,"nodesdn")).actionGet().isExists());
-            }
         }
     }
 
@@ -240,9 +318,8 @@ public abstract class AbstractSecurityUnitTest {
             builder.putList("plugins.security.authcz.admin_dn", "CN=kirk,OU=client,O=client,l=tEst, C=De");
             builder.put(ConfigConstants.SECURITY_BACKGROUND_INIT_IF_SECURITYINDEX_NOT_EXIST, false);
         }
-
+        builder.put("cluster.routing.allocation.disk.threshold_enabled", false);
         builder.put(other);
-
         return builder;
     }
 
@@ -291,12 +368,8 @@ public abstract class AbstractSecurityUnitTest {
         };
     }
 
-    protected void initialize(ClusterInfo info) {
-        initialize(info, Settings.EMPTY, new DynamicSecurityConfig());
-    }
-
-    protected void initialize(ClusterInfo info, DynamicSecurityConfig DynamicSecurityConfig) {
-        initialize(info, Settings.EMPTY, DynamicSecurityConfig);
+    protected void initialize(ClusterHelper clusterHelper, ClusterInfo info) throws IOException {
+        initialize(clusterHelper, info, new DynamicSecurityConfig());
     }
 
     protected final void assertContains(HttpResponse res, String pattern) {
@@ -311,10 +384,6 @@ public abstract class AbstractSecurityUnitTest {
         return null;
     }
 
-
-    protected String getType() {
-        return "_doc";
-    }
 
     /**
      * Check if transport certs are is mentioned in the custom settings

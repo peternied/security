@@ -1,53 +1,39 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.rest.api;
 
 import java.util.List;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentType;
+
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.dlic.rest.validation.AbstractConfigurationValidator;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
-import com.google.common.collect.ImmutableList;
 
-import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
-@RunWith(Parameterized.class)
 public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
-
-    private final String ENDPOINT;
-
-    public ActionGroupsApiTest(String endpoint){
-        ENDPOINT = endpoint;
+    private final String ENDPOINT; 
+    protected String getEndpointPrefix() {
+        return PLUGINS_PREFIX;
     }
 
-    @Parameterized.Parameters
-    public static Iterable<String> endpoints() {
-        return ImmutableList.of(
-                LEGACY_OPENDISTRO_PREFIX + "/api/actiongroups",
-                PLUGINS_PREFIX + "/api/actiongroups"
-        );
+    public ActionGroupsApiTest(){
+        ENDPOINT = getEndpointPrefix() + "/api/actiongroups";
     }
 
     @Test
@@ -102,10 +88,10 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 
         // add user picard, role starfleet, maps to opendistro_security_role_starfleet
         addUserWithPassword("picard", "picard", new String[] { "starfleet" }, HttpStatus.SC_CREATED);
-        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
+        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
         // TODO: only one doctype allowed for ES6
         // checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
-        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
+        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
         // TODO: only one doctype allowed for ES6
         //checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "public", 0);
 
@@ -123,22 +109,22 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
         rh.sendAdminCertificate = false;
-        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
+        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
 
         // put picard in captains role. Role opendistro_security_role_captains uses the CRUD_UT
         // action group
         // which uses READ_UT and WRITE action groups. We removed READ_UT, so only
         // WRITE is possible
         addUserWithPassword("picard", "picard", new String[] { "captains" }, HttpStatus.SC_OK);
-        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
+        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
+        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
 
         // now remove also CRUD_UT groups, write also not possible anymore
         rh.sendAdminCertificate = true;
         response = rh.executeDeleteRequest(ENDPOINT+"/CRUD_UT", new Header[0]);
         rh.sendAdminCertificate = false;
-        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
+        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
+        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
 
         // -- PUT
 
@@ -162,8 +148,8 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
         rh.sendAdminCertificate = false;
 
         // write access allowed again, read forbidden, since READ_UT group is still missing
-        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
+        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
+        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
 
         // restore READ_UT action groups
         rh.sendAdminCertificate = true;
@@ -172,8 +158,8 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
 
         rh.sendAdminCertificate = false;
         // read/write allowed again
-        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
+        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
+        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
 
         // -- PUT, new JSON format including readonly flag, disallowed in REST API
         rh.sendAdminCertificate = true;
@@ -192,6 +178,18 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
         response = rh.executePutRequest(ENDPOINT+"/GET_UT", FileHelper.loadFile("restapi/actiongroup_read.json"), new Header[0]);
         Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());
         Assert.assertFalse(response.getBody().contains("Resource 'GET_UT' is read-only."));
+
+        // PUT with role name
+        rh.sendAdminCertificate = true;
+        response = rh.executePutRequest(ENDPOINT+"/kibana_user", FileHelper.loadFile("restapi/actiongroup_read.json"), new Header[0]);
+        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+        Assert.assertTrue(response.getBody().contains("kibana_user is an existing role. A action group cannot be named with an existing role name."));
+
+        // PUT with self-referencing action groups
+        rh.sendAdminCertificate = true;
+        response = rh.executePutRequest(ENDPOINT+"/reference_itself", "{\"allowed_actions\": [\"reference_itself\"]}", new Header[0]);
+        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+        Assert.assertTrue(response.getBody().contains("reference_itself cannot be an allowed_action of itself"));
 
         // -- GET_UT hidden resource, must be 404 but super admin can find it
         rh.sendAdminCertificate = true;
@@ -221,6 +219,17 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
         rh.sendAdminCertificate = true;
         response = rh.executePatchRequest(ENDPOINT+"/GET_UT", "[{ \"op\": \"add\", \"path\": \"/description\", \"value\": \"foo\" }]", new Header[0]);
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
+
+        // PATCH with self-referencing action groups
+        rh.sendAdminCertificate = true;
+        response = rh.executePatchRequest(ENDPOINT+"/GET_UT", "[{ \"op\": \"add\", \"path\": \"/allowed_actions/-\", \"value\": \"GET_UT\" }]", new Header[0]);
+        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+        Assert.assertTrue(response.getBody().contains("GET_UT cannot be an allowed_action of itself"));
+
+        // bulk PATCH with self-referencing action groups
+        response = rh.executePatchRequest(ENDPOINT, "[{ \"op\": \"add\", \"path\": \"/BULKNEW1\", \"value\": {\"allowed_actions\": [\"BULKNEW1\"] } }," + "{ \"op\": \"add\", \"path\": \"/BULKNEW2\", \"value\": {\"allowed_actions\": [\"READ_UT\"] } }]", new Header[0]);
+        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+        Assert.assertTrue(response.getBody().contains("BULKNEW1 cannot be an allowed_action of itself"));
 
         // PATCH hidden resource, must be not found, can be found by superadmin, but fails with no path exist error
         rh.sendAdminCertificate = true;

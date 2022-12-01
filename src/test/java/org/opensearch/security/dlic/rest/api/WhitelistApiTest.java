@@ -1,21 +1,27 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.rest.api;
 
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableMap;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
+import org.junit.Assert;
+import org.junit.Test;
+
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.auditlog.impl.AuditMessage;
@@ -25,33 +31,17 @@ import org.opensearch.security.filter.SecurityRestFilter;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.ImmutableMap;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.opensearch.common.settings.Settings;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import com.google.common.collect.ImmutableList;
-
-import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
 /**
  * Testing class to verify that {@link WhitelistApiAction} works correctly.
  * Check {@link SecurityRestFilter} for extra tests for whitelisting functionality.
  */
-@RunWith(Parameterized.class)
 public class WhitelistApiTest extends AbstractRestApiUnitTest {
     private RestHelper.HttpResponse response;
 
@@ -61,19 +51,13 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
      */
     private final Header adminCredsHeader = encodeBasicHeader("admin_all_access", "admin_all_access");
     private final Header nonAdminCredsHeader = encodeBasicHeader("sarek", "sarek");
-
-    private final String ENDPOINT;
-
-    public WhitelistApiTest(String endpoint){
-        ENDPOINT = endpoint;
+    private final String ENDPOINT; 
+    protected String getEndpointPrefix() {
+        return PLUGINS_PREFIX;
     }
 
-    @Parameterized.Parameters
-    public static Iterable<String> endpoints() {
-        return ImmutableList.of(
-                LEGACY_OPENDISTRO_PREFIX + "/api",
-                PLUGINS_PREFIX + "/api"
-        );
+    public WhitelistApiTest(){
+        ENDPOINT = getEndpointPrefix() + "/api";
     }
 
     /**
@@ -81,7 +65,7 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
      *
      * @throws Exception
      */
-    private void testGetAndPut(final int expectedStatus, final boolean sendAdminCertificate, final Header... headers) throws Exception {
+    private void checkGetAndPutWhitelistPermissions(final int expectedStatus, final boolean sendAdminCertificate, final Header... headers) throws Exception {
 
         final boolean prevSendAdminCertificate = rh.sendAdminCertificate;
         rh.sendAdminCertificate = sendAdminCertificate;
@@ -104,34 +88,22 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
         rh.sendAdminCertificate = prevSendAdminCertificate;
     }
 
-    /**
-     * Tests that the response does not have a _meta header
-     *
-     * @throws Exception
-     */
     @Test
     public void testResponseDoesNotContainMetaHeader() throws Exception {
 
         setup();
 
-        rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
         RestHelper.HttpResponse response = rh.executeGetRequest(ENDPOINT + "/whitelist");
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
         Assert.assertFalse(response.getBody().contains("_meta"));
     }
 
-    /**
-     * Tests that putting an unknown key fails
-     *
-     * @throws Exception
-     */
     @Test
     public void testPutUnknownKey() throws Exception {
 
         setup();
 
-        rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
         RestHelper.HttpResponse response = rh.executePutRequest(ENDPOINT + "/whitelist", "{ \"unknownkey\": true, \"requests\": {\"/_cat/nodes\": [\"GET\"],\"/_cat/indices\": [\"GET\"] }}");
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
@@ -139,16 +111,10 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
         assertHealthy();
     }
 
-    /**
-     * Tests that invalid json body fails
-     *
-     * @throws Exception
-     */
     @Test
     public void testPutInvalidJson() throws Exception {
         setup();
 
-        rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
         RestHelper.HttpResponse response = rh.executePutRequest(ENDPOINT + "/whitelist", "{ \"invalid\"::{{ [\"*\"], \"requests\": {\"/_cat/nodes\": [\"GET\"],\"/_cat/indices\": [\"GET\"] }}");
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
@@ -164,7 +130,6 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
     public void testPayloadMandatory() throws Exception {
         setup();
 
-        rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
         response = rh.executePutRequest(ENDPOINT + "/whitelist", "", new Header[0]);
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
@@ -184,18 +149,17 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
     @Test
     public void testWhitelistApi() throws Exception {
         setupWithRestRoles(null);
-         rh.keystore = "restapi/kirk-keystore.jks";
         // No creds, no admin certificate - UNAUTHORIZED
-        testGetAndPut(HttpStatus.SC_UNAUTHORIZED, false);
+        checkGetAndPutWhitelistPermissions(HttpStatus.SC_UNAUTHORIZED, false);
 
         //non admin creds, no admin certificate - FORBIDDEN
-        testGetAndPut(HttpStatus.SC_FORBIDDEN, false, nonAdminCredsHeader);
+        checkGetAndPutWhitelistPermissions(HttpStatus.SC_FORBIDDEN, false, nonAdminCredsHeader);
 
         // admin creds, no admin certificate - FORBIDDEN
-        testGetAndPut(HttpStatus.SC_FORBIDDEN, false, adminCredsHeader);
+        checkGetAndPutWhitelistPermissions(HttpStatus.SC_FORBIDDEN, false, adminCredsHeader);
 
         // any creds, admin certificate - OK
-        testGetAndPut(HttpStatus.SC_OK, true, nonAdminCredsHeader);
+        checkGetAndPutWhitelistPermissions(HttpStatus.SC_OK, true, nonAdminCredsHeader);
     }
 
     @Test
@@ -215,8 +179,7 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
         TestAuditlogImpl.clear();
 
         // any creds, admin certificate - OK
-        rh.keystore = "restapi/kirk-keystore.jks";
-        testGetAndPut(HttpStatus.SC_OK, true, nonAdminCredsHeader);
+        checkGetAndPutWhitelistPermissions(HttpStatus.SC_OK, true, nonAdminCredsHeader);
 
         //TESTS THAT 1 READ AND 1 WRITE HAPPENS IN testGetAndPut()
         final Map<AuditCategory, Long> expectedCategoryCounts = ImmutableMap.of(
@@ -230,7 +193,6 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
     @Test
     public void testWhitelistInvalidHttpRequestMethod() throws Exception{
         setup();
-        rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
 
         response = rh.executePutRequest(ENDPOINT + "/whitelist", "{\"enabled\": true, \"requests\": {\"/_cat/nodes\": [\"GE\"],\"/_cat/indices\": [\"PUT\"] }}", adminCredsHeader);
@@ -248,7 +210,6 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
     @Test
     public void testPatchApi() throws Exception{
         setup();
-        rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
 
         //PATCH entire config entry
@@ -282,4 +243,3 @@ public class WhitelistApiTest extends AbstractRestApiUnitTest {
         assertTrue(response.getBody().contains("\"enabled\":false"));
     }
 }
-

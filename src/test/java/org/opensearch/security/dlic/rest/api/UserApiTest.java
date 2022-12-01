@@ -1,57 +1,43 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.rest.api;
 
+import java.net.URLEncoder;
+import java.util.List;
+
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.message.BasicHeader;
+import org.junit.Assert;
+import org.junit.Test;
+
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.dlic.rest.validation.AbstractConfigurationValidator;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.helper.file.FileHelper;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.apache.http.message.BasicHeader;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentType;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
-import java.net.URLEncoder;
-import com.google.common.collect.ImmutableList;
-import java.util.List;
-
-import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
-@RunWith(Parameterized.class)
 public class UserApiTest extends AbstractRestApiUnitTest {
-
-    private final String ENDPOINT;
-
-    public UserApiTest(String endpoint){
-        ENDPOINT = endpoint;
+    private final String ENDPOINT; 
+    protected String getEndpointPrefix() {
+        return PLUGINS_PREFIX;
     }
 
-    @Parameterized.Parameters
-    public static Iterable<String> endpoints() {
-        return ImmutableList.of(
-                LEGACY_OPENDISTRO_PREFIX + "/api",
-                PLUGINS_PREFIX + "/api"
-        );
+    public UserApiTest(){
+        ENDPOINT = getEndpointPrefix() + "/api";
     }
 
     @Test
@@ -389,20 +375,20 @@ public class UserApiTest extends AbstractRestApiUnitTest {
         // changed in ES5, you now need cluster:monitor/main which pucard does not have
         checkGeneralAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard");
 
-        // check read access to starfleet index and ships type, must fail
-        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
+        // check read access to starfleet index and _doc type, must fail
+        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
 
         // overwrite user picard, and give him role "starfleet".
         addUserWithPassword("picard", "picard", new String[]{"starfleet"}, HttpStatus.SC_OK);
 
-        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
+        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
+        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 1);
 
         // overwrite user picard, and give him role "starfleet" plus "captains. Now
         // document can be created.
         addUserWithPassword("picard", "picard", new String[]{"starfleet", "captains"}, HttpStatus.SC_OK);
-        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-        checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "ships", 1);
+        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
+        checkWriteAccess(HttpStatus.SC_CREATED, "picard", "picard", "sf", "_doc", 1);
 
         rh.sendAdminCertificate = true;
         response = rh.executeGetRequest(ENDPOINT + "/internalusers/picard", new Header[0]);

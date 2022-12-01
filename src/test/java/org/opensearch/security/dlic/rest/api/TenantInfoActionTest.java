@@ -1,58 +1,44 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.rest.api;
 
-import com.google.common.collect.ImmutableList;
-import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.test.helper.rest.RestHelper;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.opensearch.common.settings.Settings;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.test.helper.rest.RestHelper;
+
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
-@RunWith(Parameterized.class)
 public class TenantInfoActionTest extends AbstractRestApiUnitTest {
     private String payload = "{\"hosts\":[],\"users\":[\"sarek\"]," +
             "\"backend_roles\":[\"starfleet*\",\"ambassador\"],\"and_backend_roles\":[],\"description\":\"Migrated " +
             "from v6\"}";
-
     private final String BASE_ENDPOINT;
-    private final String ENDPOINT;
-
-
-    public TenantInfoActionTest(String endpoint){
-        BASE_ENDPOINT = endpoint;
-        ENDPOINT = BASE_ENDPOINT + "/tenantinfo";
+    private final String ENDPOINT; 
+    protected String getEndpointPrefix() {
+        return PLUGINS_PREFIX;
     }
 
-    @Parameterized.Parameters
-    public static Iterable<String> endpoints() {
-        return ImmutableList.of(
-                LEGACY_OPENDISTRO_PREFIX,
-                PLUGINS_PREFIX
-        );
+    public TenantInfoActionTest(){
+        BASE_ENDPOINT = getEndpointPrefix();
+        ENDPOINT = getEndpointPrefix() + "/tenantinfo";
     }
+
     @Test
-    public void testTenantInfoAPI() throws Exception {
+    public void testTenantInfoAPIAccess() throws Exception {
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_UNSUPPORTED_RESTAPI_ALLOW_SECURITYCONFIG_MODIFICATION, true).build();
         setup(settings);
 
@@ -68,11 +54,19 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
         rh.sendHTTPClientCredentials = true;
         response = rh.executeGetRequest(ENDPOINT);
         Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
+    }
 
+    @Test
+    public void testTenantInfoAPIUpdate() throws Exception {
+        Settings settings = Settings.builder().put(ConfigConstants.SECURITY_UNSUPPORTED_RESTAPI_ALLOW_SECURITYCONFIG_MODIFICATION, true).build();
+        setup(settings);
+        
+        rh.keystore = "restapi/kirk-keystore.jks";
+        rh.sendHTTPClientCredentials = true;
         rh.sendAdminCertificate = true;
 
         //update security config
-        response = rh.executePatchRequest(BASE_ENDPOINT + "/api/securityconfig", "[{\"op\": \"add\",\"path\": \"/config/dynamic/kibana/opendistro_role\"," +
+        RestHelper.HttpResponse response = rh.executePatchRequest(BASE_ENDPOINT + "/api/securityconfig", "[{\"op\": \"add\",\"path\": \"/config/dynamic/kibana/opendistro_role\"," +
                 "\"value\": \"opendistro_security_internal\"}]", new Header[0]);
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 

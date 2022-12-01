@@ -1,16 +1,12 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.dlsfls;
@@ -19,25 +15,25 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.http.HttpStatus;
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.admin.indices.refresh.RefreshRequest;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.StopWatch;
-import org.opensearch.common.xcontent.XContentBuilder;
-import org.opensearch.common.xcontent.json.JsonXContent;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.admin.indices.refresh.RefreshRequest;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.client.Client;
+import org.opensearch.common.StopWatch;
+import org.opensearch.common.xcontent.XContentBuilder;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 @Ignore
 public class FlsPerfTest extends AbstractDlsFlsTest{
 
 
-    protected void populateData(TransportClient tc) {
+    protected void populateData(Client tc) {
 
         Map<String, Object> indexSettings = new HashMap<>(3);
         indexSettings.put("index.mapping.total_fields.limit",50000);
@@ -50,7 +46,7 @@ public class FlsPerfTest extends AbstractDlsFlsTest{
 
         try {
 
-            IndexRequest ir =  new IndexRequest("deals").type("deals2").id("idx1");
+            IndexRequest ir =  new IndexRequest("deals").id("idx1");
             XContentBuilder b = XContentBuilder.builder(JsonXContent.jsonXContent);
             b.startObject();
 
@@ -67,7 +63,7 @@ public class FlsPerfTest extends AbstractDlsFlsTest{
 
             for(int i=0; i<1500; i++) {
 
-                ir =  new IndexRequest("deals").type("deals").id("id"+i);
+                ir =  new IndexRequest("deals").id("id"+i);
                 b = XContentBuilder.builder(JsonXContent.jsonXContent);
                 b.startObject();
                 for(int j=0; j<2000;j++) {

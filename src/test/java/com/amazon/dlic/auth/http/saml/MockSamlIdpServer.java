@@ -1,16 +1,12 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package com.amazon.dlic.auth.http.saml;
@@ -34,7 +30,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -47,10 +42,7 @@ import java.util.stream.Collectors;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManagerFactory;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletInputStream;
@@ -67,29 +59,29 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.http.Header;
-import org.apache.http.HttpConnectionFactory;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.config.ConnectionConfig;
-import org.apache.http.config.MessageConstraints;
-import org.apache.http.entity.ContentLengthStrategy;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.ConnSupport;
-import org.apache.http.impl.DefaultBHttpServerConnection;
-import org.apache.http.impl.bootstrap.HttpServer;
-import org.apache.http.impl.bootstrap.SSLServerSetupHandler;
-import org.apache.http.impl.bootstrap.ServerBootstrap;
-import org.apache.http.io.HttpMessageParserFactory;
-import org.apache.http.io.HttpMessageWriterFactory;
-import org.apache.http.message.BasicHttpRequest;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpRequestHandler;
-import org.apache.xml.security.utils.EncryptionConstants;
+import net.shibboleth.utilities.java.support.codec.Base64Support;
+import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
+import org.apache.hc.core5.function.Callback;
+import org.apache.hc.core5.http.ClassicHttpRequest;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.ContentLengthStrategy;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.config.Http1Config;
+import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
+import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
+import org.apache.hc.core5.http.impl.io.DefaultBHttpServerConnection;
+import org.apache.hc.core5.http.io.HttpConnectionFactory;
+import org.apache.hc.core5.http.io.HttpMessageParserFactory;
+import org.apache.hc.core5.http.io.HttpMessageWriterFactory;
+import org.apache.hc.core5.http.io.HttpRequestHandler;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicHttpRequest;
+import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.hc.core5.net.URIBuilder;
 import org.joda.time.DateTime;
 import org.opensaml.core.xml.XMLObject;
 import org.opensaml.core.xml.XMLObjectBuilderFactory;
@@ -159,9 +151,6 @@ import org.w3c.dom.Document;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.network.SocketUtils;
 
-import net.shibboleth.utilities.java.support.codec.Base64Support;
-import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
-
 class MockSamlIdpServer implements Closeable {
 
     final static String ENTITY_ID = "http://test.entity";
@@ -205,53 +194,41 @@ class MockSamlIdpServer implements Closeable {
         this.loadSigningKeys("saml/kirk-keystore.jks", "kirk");
 
         ServerBootstrap serverBootstrap = ServerBootstrap.bootstrap().setListenerPort(port)
-                .registerHandler(CTX_METADATA, new HttpRequestHandler() {
+                .register(CTX_METADATA, new HttpRequestHandler() {
 
                     @Override
-                    public void handle(HttpRequest request, HttpResponse response, HttpContext context)
-                            throws HttpException, IOException {
+                    public void handle(ClassicHttpRequest request, ClassicHttpResponse response, HttpContext context) throws HttpException, IOException {
 
                         handleMetadataRequest(request, response, context);
 
                     }
-                }).registerHandler(CTX_SAML_SSO, new HttpRequestHandler() {
+                }).register(CTX_SAML_SSO, new HttpRequestHandler() {
 
                     @Override
-                    public void handle(HttpRequest request, HttpResponse response, HttpContext context)
-                            throws HttpException, IOException {
-
+                    public void handle(ClassicHttpRequest request, ClassicHttpResponse response, HttpContext context) throws HttpException, IOException {
                         handleSsoRequest(request, response, context);
-
                     }
-                }).registerHandler(CTX_SAML_SLO, new HttpRequestHandler() {
+                }).register(CTX_SAML_SLO, new HttpRequestHandler() {
 
                     @Override
-                    public void handle(HttpRequest request, HttpResponse response, HttpContext context)
-                            throws HttpException, IOException {
-
+                    public void handle(ClassicHttpRequest request, ClassicHttpResponse response, HttpContext context) throws HttpException, IOException {
                         handleSloRequest(request, response, context);
-
                     }
                 });
 
         if (ssl) {
+
             serverBootstrap = serverBootstrap.setSslContext(createSSLContext())
-                    .setSslSetupHandler(new SSLServerSetupHandler() {
-
+                    .setSslSetupHandler(new Callback<SSLParameters>() {
                         @Override
-                        public void initialize(SSLServerSocket socket) throws SSLException {
-                            socket.setNeedClientAuth(true);
+                        public void execute(SSLParameters object) {
+                            object.setNeedClientAuth(true);
                         }
-                    }).setConnectionFactory(new HttpConnectionFactory<DefaultBHttpServerConnection>() {
-
-                        private ConnectionConfig cconfig = ConnectionConfig.DEFAULT;
-
+                    })
+                    .setConnectionFactory(new HttpConnectionFactory<DefaultBHttpServerConnection>() {
                         @Override
                         public DefaultBHttpServerConnection createConnection(final Socket socket) throws IOException {
-                            final SSLTestHttpServerConnection conn = new SSLTestHttpServerConnection(
-                                    this.cconfig.getBufferSize(), this.cconfig.getFragmentSizeHint(),
-                                    ConnSupport.createDecoder(this.cconfig), ConnSupport.createEncoder(this.cconfig),
-                                    this.cconfig.getMessageConstraints(), null, null, null, null);
+                            final DefaultBHttpServerConnection conn = new DefaultBHttpServerConnection(ssl ? "https" : "http", Http1Config.DEFAULT);
                             conn.bind(socket);
                             return conn;
                         }
@@ -312,9 +289,9 @@ class MockSamlIdpServer implements Closeable {
         return port;
     }
 
-    protected void handleMetadataRequest(HttpRequest request, HttpResponse response, HttpContext context)
+    protected void handleMetadataRequest(HttpRequest request, ClassicHttpResponse response, HttpContext context)
             throws HttpException, IOException {
-        response.setStatusCode(200);
+        response.setCode(200);
         response.setHeader("Cache-Control", "public, max-age=31536000");
         response.setHeader("Content-Type", "application/xml");
         response.setEntity(new StringEntity(createMetadata()));
@@ -323,10 +300,10 @@ class MockSamlIdpServer implements Closeable {
     protected void handleSsoRequest(HttpRequest request, HttpResponse response, HttpContext context)
             throws HttpException, IOException {
 
-        if ("GET".equalsIgnoreCase(request.getRequestLine().getMethod())) {
+        if ("GET".equalsIgnoreCase(request.getMethod())) {
             handleSsoGetRequestBase(request);
         } else {
-            response.setStatusCode(405);
+            response.setCode(405);
         }
 
     }
@@ -334,10 +311,10 @@ class MockSamlIdpServer implements Closeable {
     protected void handleSloRequest(HttpRequest request, HttpResponse response, HttpContext context)
             throws HttpException, IOException {
 
-        if ("GET".equalsIgnoreCase(request.getRequestLine().getMethod())) {
+        if ("GET".equalsIgnoreCase(request.getMethod())) {
             handleSloGetRequestBase(request);
         } else {
-            response.setStatusCode(405);
+            response.setCode(405);
         }
     }
 
@@ -521,7 +498,8 @@ class MockSamlIdpServer implements Closeable {
 
     private Encrypter getEncrypter() {
         KeyEncryptionParameters kek = new KeyEncryptionParameters();
-        kek.setAlgorithm(EncryptionConstants.ALGO_ID_KEYTRANSPORT_RSA15);
+        // Algorithm from https://santuario.apache.org/Java/api/constant-values.html#org.apache.xml.security.utils.EncryptionConstants.ALGO_ID_KEYTRANSPORT_RSA15
+        kek.setAlgorithm("http://www.w3.org/2001/04/xmlenc#rsa-1_5");
         kek.setEncryptionCredential(new BasicX509Credential(spSignatureCertificate));
         Encrypter encrypter = new Encrypter( new DataEncryptionParameters(),kek);
         encrypter.setKeyPlacement(Encrypter.KeyPlacement.INLINE);
@@ -731,18 +709,14 @@ class MockSamlIdpServer implements Closeable {
     }
 
     static class SSLTestHttpServerConnection extends DefaultBHttpServerConnection {
-        public SSLTestHttpServerConnection(final int buffersize, final int fragmentSizeHint,
-                final CharsetDecoder chardecoder, final CharsetEncoder charencoder,
-                final MessageConstraints constraints, final ContentLengthStrategy incomingContentStrategy,
-                final ContentLengthStrategy outgoingContentStrategy,
-                final HttpMessageParserFactory<HttpRequest> requestParserFactory,
-                final HttpMessageWriterFactory<HttpResponse> responseWriterFactory) {
-            super(buffersize, fragmentSizeHint, chardecoder, charencoder, constraints, incomingContentStrategy,
+        public SSLTestHttpServerConnection(final String scheme, Http1Config http1Config,
+                                           final CharsetDecoder charDecoder, final CharsetEncoder charEncoder,
+                                           final ContentLengthStrategy incomingContentStrategy,
+                                           final ContentLengthStrategy outgoingContentStrategy,
+                                           final HttpMessageParserFactory<ClassicHttpRequest> requestParserFactory,
+                                           final HttpMessageWriterFactory<ClassicHttpResponse> responseWriterFactory) {
+            super(scheme, http1Config, charDecoder, charEncoder, incomingContentStrategy,
                     outgoingContentStrategy, requestParserFactory, responseWriterFactory);
-        }
-
-        public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
-            return ((SSLSocket) getSocket()).getSession().getPeerCertificates();
         }
     }
 
@@ -753,7 +727,7 @@ class MockSamlIdpServer implements Closeable {
 
         FakeHttpServletRequest(HttpRequest delegate) throws URISyntaxException {
             this.delegate = delegate;
-            String uri = delegate.getRequestLine().getUri();
+            String uri = delegate.getRequestUri();
             this.uriBuilder = new URIBuilder(uri);
             this.queryParams = uriBuilder.getQueryParams().stream()
                     .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
@@ -772,8 +746,8 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public String getCharacterEncoding() {
-            if (delegate instanceof HttpEntityEnclosingRequest) {
-                return ((HttpEntityEnclosingRequest) delegate).getEntity().getContentEncoding().getValue();
+            if (delegate instanceof ClassicHttpRequest) {
+                return ((ClassicHttpRequest) delegate).getEntity().getContentEncoding();
             } else {
                 return null;
             }
@@ -781,8 +755,8 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public int getContentLength() {
-            if (delegate instanceof HttpEntityEnclosingRequest) {
-                return (int) ((HttpEntityEnclosingRequest) delegate).getEntity().getContentLength();
+            if (delegate instanceof ClassicHttpRequest) {
+                return (int) ((ClassicHttpRequest) delegate).getEntity().getContentLength();
             } else {
                 return 0;
             }
@@ -790,8 +764,8 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public String getContentType() {
-            if (delegate instanceof HttpEntityEnclosingRequest) {
-                return ((HttpEntityEnclosingRequest) delegate).getEntity().getContentType().getValue();
+            if (delegate instanceof ClassicHttpRequest) {
+                return ((ClassicHttpRequest) delegate).getEntity().getContentType();
             } else {
                 return null;
             }
@@ -799,8 +773,8 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public ServletInputStream getInputStream() throws IOException {
-            if (delegate instanceof HttpEntityEnclosingRequest) {
-                final InputStream in = ((HttpEntityEnclosingRequest) delegate).getEntity().getContent();
+            if (delegate instanceof ClassicHttpRequest) {
+                final InputStream in = ((ClassicHttpRequest) delegate).getEntity().getContent();
 
                 return new ServletInputStream() {
 
@@ -882,8 +856,8 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public BufferedReader getReader() throws IOException {
-            if (delegate instanceof HttpEntityEnclosingRequest) {
-                final InputStream in = ((HttpEntityEnclosingRequest) delegate).getEntity().getContent();
+            if (delegate instanceof ClassicHttpRequest) {
+                final InputStream in = ((ClassicHttpRequest) delegate).getEntity().getContent();
 
                 return new BufferedReader(new InputStreamReader(in));
             } else {
@@ -986,7 +960,7 @@ class MockSamlIdpServer implements Closeable {
         @Override
         public Enumeration getHeaderNames() {
             return Collections.enumeration(
-                    Arrays.asList(delegate.getAllHeaders()).stream().map(Header::getName).collect(Collectors.toSet()));
+                    Arrays.asList(delegate.getHeaders()).stream().map(Header::getName).collect(Collectors.toSet()));
         }
 
         @SuppressWarnings("rawtypes")
@@ -1015,7 +989,7 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public String getMethod() {
-            return delegate.getRequestLine().getMethod();
+            return delegate.getMethod();
         }
 
         @Override
@@ -1030,7 +1004,7 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public String getQueryString() {
-            return this.delegate.getRequestLine().getUri().replaceAll("^.*\\?", "");
+            return this.delegate.getRequestUri().replaceAll("^.*\\?", "");
         }
 
         @Override
@@ -1040,12 +1014,12 @@ class MockSamlIdpServer implements Closeable {
 
         @Override
         public String getRequestURI() {
-            return delegate.getRequestLine().getUri();
+            return delegate.getRequestUri();
         }
 
         @Override
         public StringBuffer getRequestURL() {
-            return new StringBuffer(delegate.getRequestLine().getUri());
+            return new StringBuffer(delegate.getRequestUri());
         }
 
         @Override

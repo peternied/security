@@ -17,16 +17,17 @@
 
 package org.opensearch.security;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.message.BasicHeader;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.http.message.BasicHeader;
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.rest.RestHelper;
-import org.opensearch.tasks.Task;
-import org.junit.Assert;
-import org.junit.Test;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
+import org.opensearch.tasks.Task;
 
 public class TaskTests extends SingleClusterTest {
     

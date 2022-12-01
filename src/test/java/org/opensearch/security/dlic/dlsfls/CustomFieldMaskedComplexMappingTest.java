@@ -1,31 +1,27 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.dlsfls;
 
 import java.nio.charset.StandardCharsets;
 
-import org.apache.http.HttpStatus;
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.bulk.BulkRequest;
-import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.xcontent.XContentType;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.bulk.BulkRequest;
+import org.opensearch.action.support.WriteRequest.RefreshPolicy;
+import org.opensearch.client.Client;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
@@ -33,10 +29,10 @@ public class CustomFieldMaskedComplexMappingTest extends AbstractDlsFlsTest{
 
 
     @Override
-    protected void populateData(TransportClient tc) {
+    protected void populateData(Client tc) {
 
         try {
-            tc.admin().indices().create(new CreateIndexRequest("logs").mapping("_doc", FileHelper.loadFile("dlsfls/masked_field_mapping.json"), XContentType.JSON)).actionGet();
+            tc.admin().indices().create(new CreateIndexRequest("logs").mapping(FileHelper.loadFile("dlsfls/masked_field_mapping.json"), XContentType.JSON)).actionGet();
 
 
             byte[] data = FileHelper.loadFile("dlsfls/logs_bulk_data.json").getBytes(StandardCharsets.UTF_8);

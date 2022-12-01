@@ -1,49 +1,44 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.auditlog.impl;
-
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.opensearch.security.auditlog.AuditTestUtils;
-import org.opensearch.security.test.AbstractSecurityUnitTest;
+import com.google.common.base.Joiner;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
 import org.opensearch.cluster.ClusterName;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.Settings.Builder;
 import org.opensearch.security.auditlog.AuditLog;
+import org.opensearch.security.auditlog.AuditTestUtils;
 import org.opensearch.security.auditlog.helper.MockRestRequest;
 import org.opensearch.security.auditlog.integration.TestAuditlogImpl;
 import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.tasks.Task;
+import org.opensearch.security.test.AbstractSecurityUnitTest;
 import org.opensearch.transport.TransportRequest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
 
-import com.google.common.base.Joiner;
-import org.junit.rules.ExpectedException;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class DisabledCategoriesTest {
 
@@ -116,10 +111,8 @@ public class DisabledCategoriesTest {
 
 		Assert.assertTrue(AuditCategory.values()+"#"+result, categoriesPresentInLog(result, filterComplianceCategories(AuditCategory.values())));
 
-		Assert.assertThat(result, containsString("testuser.transport.succeededlogin"));
 		Assert.assertThat(result, containsString("testuser.rest.succeededlogin"));
 		Assert.assertThat(result, containsString("testuser.rest.failedlogin"));
-		Assert.assertThat(result, containsString("testuser.transport.failedlogin"));
 		Assert.assertThat(result, containsString("privilege.missing"));
 		Assert.assertThat(result, containsString("action.indexattempt"));
 		Assert.assertThat(result, containsString("action.transport.ssl"));
@@ -195,7 +188,6 @@ public class DisabledCategoriesTest {
 	}
 
 	protected void logAll(AuditLog auditLog) {
-		//11 requests
 	    logRestFailedLogin(auditLog);
 		logRestBadHeaders(auditLog);
 		logRestSSLException(auditLog);
@@ -207,8 +199,6 @@ public class DisabledCategoriesTest {
 
 		logTransportSSLException(auditLog);
 		logTransportBadHeaders(auditLog);
-		logTransportFailedLogin(auditLog);
-		logTransportSucceededLogin(auditLog);
 
 		logIndexEvent(auditLog);
     }
@@ -217,17 +207,8 @@ public class DisabledCategoriesTest {
 	     auditLog.logSucceededLogin("testuser.rest.succeededlogin", false, "testuser.rest.succeededlogin", new MockRestRequest());
 	 }
 
-	 protected void logTransportSucceededLogin(AuditLog auditLog) {
-	     auditLog.logSucceededLogin("testuser.transport.succeededlogin", false, "testuser.transport.succeededlogin", new TransportRequest.Empty(), "test/action", new Task(0, "x", "ac", "", null, null));
-	 }
-
-
     protected void logRestFailedLogin(AuditLog auditLog) {
     	auditLog.logFailedLogin("testuser.rest.failedlogin", false, "testuser.rest.failedlogin", new MockRestRequest());
-    }
-
-    protected void logTransportFailedLogin(AuditLog auditLog) {
-    	auditLog.logFailedLogin("testuser.transport.failedlogin", false, "testuser.transport.failedlogin", new TransportRequest.Empty(), null);
     }
 
     protected void logMissingPrivileges(AuditLog auditLog) {

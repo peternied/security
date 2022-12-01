@@ -11,7 +11,11 @@
 
 package org.opensearch.security;
 
+<<<<<<< HEAD
 import org.apache.http.HttpStatus;
+=======
+import org.apache.hc.core5.http.HttpStatus;
+>>>>>>> origin/main
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

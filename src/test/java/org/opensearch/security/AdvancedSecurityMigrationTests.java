@@ -1,178 +1,176 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security;
 
-import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.test.SingleClusterTest;
-import org.opensearch.security.test.helper.cluster.ClusterConfiguration;
-import org.opensearch.security.test.helper.rest.RestHelper;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.opensearch.common.settings.Settings;
+import java.io.File;
+import java.util.Arrays;
+
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.util.Arrays;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.test.SingleClusterTest;
+import org.opensearch.security.test.helper.cluster.ClusterConfiguration;
+import org.opensearch.security.test.helper.cluster.ClusterHelper;
+import org.opensearch.security.test.helper.rest.RestHelper;
 
 public class AdvancedSecurityMigrationTests extends SingleClusterTest {
 
     @Before
     public void setupBefore() {
-        System.setProperty("security.default_init.dir", new File("./src/test/resources/security_passive").getAbsolutePath());
+        ClusterHelper.updateDefaultDirectory(new File(TEST_RESOURCE_RELATIVE_PATH + "security_passive").getAbsolutePath());
     }
 
     @After
     public void cleanupAfter() {
-        System.setProperty("security.default_init.dir", new File("./securityconfig").getAbsolutePath());
+        ClusterHelper.resetSystemProperties();
     }
 
     /**
-     * 2 data nodes are adv sec enabled. 1 master node and 1 data node are SSL only.
+     * 2 data nodes are adv sec enabled. 1 cluster manager node and 1 data node are SSL only.
      * Rest request lands on SSL only data node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledDataNodeWithSSlOnlyMasterNode_ReqOnSSLNode() throws Exception {
+    public void testPluginEnabledDataNodeWithSSlOnlyClusterManagerNode_ReqOnSSLNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettings().build();
         final Settings sslOnlySettings = getSSLOnlyModeSettings().build();
 
         setupGenericNodes(Arrays.asList(sslOnlySettings, advSecSettings, advSecSettings, sslOnlySettings),
-                Arrays.asList(true, false, false, true), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(true, false, false, true), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(), null);
     }
 
     /**
-     * 2 data nodes are adv sec enabled. 1 master node and 1 data node are SSL only.
+     * 2 data nodes are adv sec enabled. 1 cluster manager node and 1 data node are SSL only.
      * Rest request lands on adv sec data node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledDataNodeWithSSlOnlyMasterNode_ReqOnAdvSecNode() throws Exception {
+    public void testPluginEnabledDataNodeWithSSlOnlyClusterManagerNode_ReqOnAdvSecNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettings().build();
         final Settings sslOnlySettings = getSSLOnlyModeSettings().build();
 
         setupGenericNodes(Arrays.asList(advSecSettings, sslOnlySettings, advSecSettings, sslOnlySettings),
-                Arrays.asList(false, true, false, true), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(false, true, false, true), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(), encodeBasicHeader("admin", "admin"));
     }
 
     /**
-     * 1 Master node and 1 Data node is adv sec enabled. 2 Data nodes are SSL only.
+     * 1 cluster manager node and 1 Data node is adv sec enabled. 2 Data nodes are SSL only.
      * Rest request lands on ssl only data node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledMasterNodeWithSSlOnlyDataNode_ReqOnSSLNode() throws Exception {
+    public void testPluginEnabledClusterManagerNodeWithSSlOnlyDataNode_ReqOnSSLNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettings().build();
         final Settings sslOnlySettings = getSSLOnlyModeSettings().build();
 
         setupGenericNodes(Arrays.asList(sslOnlySettings, sslOnlySettings, advSecSettings, advSecSettings),
-                Arrays.asList(true, true, false, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(true, true, false, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(),null);
     }
 
     /**
-     * 1 Master node and 1 Data node is adv sec enabled. 2 Data nodes are SSL only.
+     * 1 cluster manager node and 1 Data node is adv sec enabled. 2 Data nodes are SSL only.
      * Rest request lands on adv sec data node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledMasterNodeWithSSlOnlyDataNode_ReqOnAdvSecNode() throws Exception {
+    public void testPluginEnabledClusterManagerNodeWithSSlOnlyDataNode_ReqOnAdvSecNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettings().build();
         final Settings sslOnlySettings = getSSLOnlyModeSettings().build();
 
         setupGenericNodes(Arrays.asList(advSecSettings, sslOnlySettings, sslOnlySettings, advSecSettings),
-                Arrays.asList(false, true, true, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(false, true, true, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(), encodeBasicHeader("admin", "admin"));
     }
 
     /**
-     * 2 Data nodes are adv sec enabled. 1 Master node and 1 Data node are plugin disabled.
+     * 2 Data nodes are adv sec enabled. 1 cluster manager node and 1 Data node are plugin disabled.
      * Rest request lands on plugin disabled node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledDataNodeWithDisabledMasterNode_ReqOnDisabledNode() throws Exception {
+    public void testPluginEnabledDataNodeWithDisabledClusterManagerNode_ReqOnDisabledNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettingsDualMode().build();
         final Settings disabledSettings = getDisabledSettings().build();
 
         setupGenericNodes(Arrays.asList(disabledSettings, advSecSettings, advSecSettings, disabledSettings),
-                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(),null);
     }
 
     /**
-     * 2 Data nodes are adv sec enabled. 1 Master node and 1 Data node are plugin disabled.
+     * 2 Data nodes are adv sec enabled. 1 cluster manager node and 1 Data node are plugin disabled.
      * Rest request lands on adv sec data node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledDataNodeWithDisabledMasterNode_ReqOnAdvSecNode() throws Exception {
+    public void testPluginEnabledDataNodeWithDisabledClusterManagerNode_ReqOnAdvSecNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettingsDualMode().build();
         final Settings disabledSettings = getDisabledSettings().build();
 
         setupGenericNodes(Arrays.asList(advSecSettings, disabledSettings, advSecSettings, disabledSettings),
-                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(), encodeBasicHeader("admin", "admin"));
     }
 
     /**
-     * 1 Master node and 1 Data node are adv sec enabled. 2 Data nodes are plugin disabled.
+     * 1 cluster manager node and 1 Data node are adv sec enabled. 2 Data nodes are plugin disabled.
      * Rest request lands on plugin disabled node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledMasterNodeWithDisabledDataNode_ReqOnDisabledNode() throws Exception {
+    public void testPluginEnabledClusterManagerNodeWithDisabledDataNode_ReqOnDisabledNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettingsDualMode().build();
         final Settings disabledSettings = getDisabledSettings().build();
 
         setupGenericNodes(Arrays.asList(disabledSettings, disabledSettings, advSecSettings, advSecSettings),
-                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(), null);
     }
 
     /**
-     * 1 Master node and 2 Data nodes are adv sec enabled. 1 Data node is plugin disabled.
+     * 1 cluster manager node and 2 Data nodes are adv sec enabled. 1 Data node is plugin disabled.
      * Rest request lands on plugin adv sec node
      * @throws Exception
      */
     @Test
-    public void testPluginEnabledMasterNodeWithDisabledDataNode_ReqOnAdvSecNode() throws Exception {
+    public void testPluginEnabledClusterManagerNodeWithDisabledDataNode_ReqOnAdvSecNode() throws Exception {
         final Settings advSecSettings = getAdvSecSettingsDualMode().build();
         final Settings disabledSettings = getDisabledSettings().build();
 
         setupGenericNodes(Arrays.asList(advSecSettings, disabledSettings, advSecSettings, advSecSettings),
-                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         commonTestsForAdvancedSecurityMigration(nonSslRestHelper(), encodeBasicHeader("admin", "admin"));
@@ -186,12 +184,12 @@ public class AdvancedSecurityMigrationTests extends SingleClusterTest {
         final Settings sslOnlySettings = getSSLOnlyModeSettings().build();
 
         setupGenericNodes(Arrays.asList(sslOnlySettings, sslOnlySettings, advSecSettings, advSecSettings),
-                Arrays.asList(true, true, false, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(true, true, false, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
         Thread.sleep(10000);
 
         RestHelper.HttpResponse res;
         RestHelper rh = nonSslRestHelper();
-        res = rh.executeGetRequest("/_cluster/health", null);
+        res = rh.executeGetRequest("/_cluster/health");
         Assert.assertEquals(res.getBody(), HttpStatus.SC_INTERNAL_SERVER_ERROR, res.getStatusCode());
     }
 
@@ -204,13 +202,13 @@ public class AdvancedSecurityMigrationTests extends SingleClusterTest {
         final Settings disabledSettings = getDisabledSettings().build();
 
         setupGenericNodes(Arrays.asList(disabledSettings, disabledSettings, advSecSettings, advSecSettings),
-                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_MASTER_THREE_DATA);
+                Arrays.asList(false, false, false, false), ClusterConfiguration.ONE_CLUSTER_MANAGER_THREE_DATA);
 
         Thread.sleep(5*1000);
 
         RestHelper.HttpResponse res;
         RestHelper rh = nonSslRestHelper();
-        res = rh.executeGetRequest("/_cluster/health", null);
+        res = rh.executeGetRequest("/_cluster/health");
         Assert.assertEquals(res.getBody(), HttpStatus.SC_INTERNAL_SERVER_ERROR, res.getStatusCode());
 
     }

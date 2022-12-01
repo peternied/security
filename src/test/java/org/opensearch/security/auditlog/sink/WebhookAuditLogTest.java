@@ -1,46 +1,45 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.auditlog.sink;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.ServerSocket;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
-import org.apache.http.entity.ContentType;
-import org.apache.http.impl.bootstrap.HttpServer;
-import org.apache.http.impl.bootstrap.ServerBootstrap;
-import org.opensearch.common.settings.Settings;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.impl.HttpProcessors;
+import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
+import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
+import org.apache.hc.core5.util.TimeValue;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.opensearch.security.auditlog.sink.WebhookSink.WebhookFormat;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.auditlog.helper.LoggingSink;
 import org.opensearch.security.auditlog.helper.MockAuditMessageFactory;
 import org.opensearch.security.auditlog.helper.TestHttpHandler;
-import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.auditlog.impl.AuditCategory;
+import org.opensearch.security.auditlog.impl.AuditMessage;
+import org.opensearch.security.auditlog.sink.WebhookSink.WebhookFormat;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.helper.file.FileHelper;
@@ -222,15 +221,16 @@ public class WebhookAuditLogTest {
 	public void postGetHttpTest() throws Exception {
 		TestHttpHandler handler = new TestHttpHandler();
 
+		int port = findFreePort();
 		server = ServerBootstrap.bootstrap()
-				.setListenerPort(8080)
-				.setServerInfo("Test/1.1")
-				.registerHandler("*", handler)
+				.setListenerPort(port)
+				.setHttpProcessor(HttpProcessors.server("Test/1.1"))
+				.register("*", handler)
 				.create();
 
 		server.start();
 
-		String url = "http://localhost:8080/endpoint";
+		String url = "http://localhost:" + port + "/endpoint";
 
 		// SLACK
 		Settings settings = Settings.builder()
@@ -319,7 +319,7 @@ public class WebhookAuditLogTest {
 		Assert.assertTrue(handler.method.equals("GET"));
 		Assert.assertEquals(null, handler.body);
 		assertStringContainsAllKeysAndValues(URLDecoder.decode(handler.uri, StandardCharsets.UTF_8.displayName()));
-		server.shutdown(3l, TimeUnit.SECONDS);
+		server.awaitTermination(TimeValue.ofSeconds(3));
 	}
 
 	@Test
@@ -327,15 +327,16 @@ public class WebhookAuditLogTest {
 
 		TestHttpHandler handler = new TestHttpHandler();
 
+		int port = findFreePort();
 		server = ServerBootstrap.bootstrap()
-				.setListenerPort(8081)
-				.setServerInfo("Test/1.1")
-				.registerHandler("*", handler)
+				.setListenerPort(port)
+				.setHttpProcessor(HttpProcessors.server("Test/1.1"))
+				.register("*", handler)
 				.create();
 
 		server.start();
 
-		String url = "https://localhost:8081/endpoint";
+		String url = "https://localhost:" + port + "/endpoint";
 
 		Settings settings = Settings.builder()
 				.put("plugins.security.audit.config.webhook.url", url)
@@ -355,7 +356,7 @@ public class WebhookAuditLogTest {
 		// ... so message must be stored in fallback
 		Assert.assertEquals(1, fallback.messages.size());
 		Assert.assertEquals(msg, fallback.messages.get(0));
-		server.shutdown(3l, TimeUnit.SECONDS);
+		server.awaitTermination(TimeValue.ofSeconds(3));
 	}
 
 
@@ -363,18 +364,18 @@ public class WebhookAuditLogTest {
     public void httpsTest() throws Exception {
 
         TestHttpHandler handler = new TestHttpHandler();
-
+		int port = findFreePort();
         server = ServerBootstrap.bootstrap()
-                .setListenerPort(8090)
-                .setServerInfo("Test/1.1")
-                .setSslContext(createSSLContext())
-                .registerHandler("*", handler)
+                .setListenerPort(port)
+				.setHttpProcessor(HttpProcessors.server("Test/1.1"))
+				.setSslContext(createSSLContext())
+				.register("*", handler)
                 .create();
 
         server.start();
         AuditMessage msg = MockAuditMessageFactory.validAuditMessage();
 
-        String url = "https://localhost:8090/endpoint";
+        String url = "https://localhost:" + port + "/endpoint";
 
         // try with ssl verification on, no trust ca, must fail
         Settings settings = Settings.builder()
@@ -440,19 +441,19 @@ public class WebhookAuditLogTest {
         Assert.assertNull(handler.body);
         Assert.assertNull(handler.body);
 
-        server.shutdown(3l, TimeUnit.SECONDS);
+		server.awaitTermination(TimeValue.ofSeconds(3));
     }
 
 	@Test
     public void httpsTestPemDefault() throws Exception {
-        final int port = 8088;
-        TestHttpHandler handler = new TestHttpHandler();
+        final int port = findFreePort();
+		TestHttpHandler handler = new TestHttpHandler();
 
         server = ServerBootstrap.bootstrap()
                 .setListenerPort(port)
-                .setServerInfo("Test/1.1")
-                .setSslContext(createSSLContext())
-                .registerHandler("*", handler)
+				.setHttpProcessor(HttpProcessors.server("Test/1.1"))
+				.setSslContext(createSSLContext())
+				.register("*", handler)
                 .create();
 
         server.start();
@@ -554,26 +555,27 @@ public class WebhookAuditLogTest {
         Assert.assertNull(handler.method);
         Assert.assertNull(handler.body);
         Assert.assertNull(handler.body);
-        server.shutdown(3l, TimeUnit.SECONDS);
+		server.awaitTermination(TimeValue.ofSeconds(3));
 	}
 
 	@Test
     public void httpsTestPemEndpoint() throws Exception {
 
         TestHttpHandler handler = new TestHttpHandler();
+		int port = findFreePort();
 
         server = ServerBootstrap.bootstrap()
-                .setListenerPort(8091)
-                .setServerInfo("Test/1.1")
-                .setSslContext(createSSLContext())
-                .registerHandler("*", handler)
+                .setListenerPort(port)
+				.setHttpProcessor(HttpProcessors.server("Test/1.1"))
+				.setSslContext(createSSLContext())
+				.register("*", handler)
                 .create();
 
         server.start();
         AuditMessage msg = MockAuditMessageFactory.validAuditMessage();
         LoggingSink fallback =  new LoggingSink("test", Settings.EMPTY, null, null);
 
-        String url = "https://localhost:8091/endpoint";
+        String url = "https://localhost:" + port + "/endpoint";
 
         // test default with filepath
         handler.reset();
@@ -651,26 +653,27 @@ public class WebhookAuditLogTest {
         Assert.assertNull(handler.body);
         Assert.assertNull(handler.body);
 
-        server.shutdown(3l, TimeUnit.SECONDS);
+		server.awaitTermination(TimeValue.ofSeconds(3));
 	}
 
 	@Test
     public void httpsTestPemContentEndpoint() throws Exception {
 
         TestHttpHandler handler = new TestHttpHandler();
+		int port = findFreePort();
 
         server = ServerBootstrap.bootstrap()
-                .setListenerPort(8086)
-                .setServerInfo("Test/1.1")
-                .setSslContext(createSSLContext())
-                .registerHandler("*", handler)
+                .setListenerPort(port)
+				.setHttpProcessor(HttpProcessors.server("Test/1.1"))
+				.setSslContext(createSSLContext())
+				.register("*", handler)
                 .create();
 
         server.start();
         AuditMessage msg = MockAuditMessageFactory.validAuditMessage();
         LoggingSink fallback =  new LoggingSink("test", Settings.EMPTY, null, null);
 
-        String url = "https://localhost:8086/endpoint";
+        String url = "https://localhost:" + port + "/endpoint";
 
         // test  with filecontent
         handler.reset();
@@ -689,9 +692,7 @@ public class WebhookAuditLogTest {
         Assert.assertTrue(handler.body.contains("{"));
         assertStringContainsAllKeysAndValues(handler.body);
 
-
-
-        server.shutdown(3l, TimeUnit.SECONDS);
+		server.awaitTermination(TimeValue.ofSeconds(3));
 	}
 
 	// for TLS support on our in-memory server
@@ -730,5 +731,13 @@ public class WebhookAuditLogTest {
 		Assert.assertTrue(in, in.contains("John Doe"));
 		Assert.assertTrue(in, in.contains("8.8.8.8"));
 		//Assert.assertTrue(in, in.contains("CN=kirk,OU=client,O=client,L=test,C=DE"));
+	}
+
+	private int findFreePort() {
+		try (ServerSocket serverSocket = new ServerSocket(0)) {
+			return serverSocket.getLocalPort();
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to find free port", e);
+		}
 	}
 }

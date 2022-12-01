@@ -1,16 +1,12 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.rest.api;
@@ -21,23 +17,22 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.opensearch.security.DefaultObjectMapper;
-import org.opensearch.security.auditlog.AuditTestUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.plugins.Plugin;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 
+import org.opensearch.common.settings.Settings;
+import org.opensearch.plugins.Plugin;
+import org.opensearch.security.DefaultObjectMapper;
+import org.opensearch.security.auditlog.AuditTestUtils;
 import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 
@@ -200,11 +195,11 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		rh.sendAdminCertificate = sendAdminCertificate;
 	}
 
-	protected String checkReadAccess(int status, String username, String password, String indexName, String type,
+	protected String checkReadAccess(int status, String username, String password, String indexName, String actionType,
 			int id) throws Exception {
 		boolean sendAdminCertificate = rh.sendAdminCertificate;
 		rh.sendAdminCertificate = false;
-		String action = indexName + "/" + type + "/" + id;
+		String action = indexName + "/" + actionType + "/" + id;
 		HttpResponse response = rh.executeGetRequest(action,
 				encodeBasicHeader(username, password));
 		int returnedStatus = response.getStatusCode();
@@ -214,12 +209,12 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 
 	}
 
-	protected String checkWriteAccess(int status, String username, String password, String indexName, String type,
+	protected String checkWriteAccess(int status, String username, String password, String indexName, String actionType,
 			int id) throws Exception {
 
 		boolean sendAdminCertificate = rh.sendAdminCertificate;
 		rh.sendAdminCertificate = false;
-		String action = indexName + "/" + type + "/" + id;
+		String action = indexName + "/" + actionType + "/" + id;
 		String payload = "{\"value\" : \"true\"}";
 		HttpResponse response = rh.executePutRequest(action, payload,
 				encodeBasicHeader(username, password));
@@ -233,8 +228,8 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 		boolean sendAdminCertificate = rh.sendAdminCertificate;
 		rh.sendAdminCertificate = true;
 		rh.executePutRequest("sf", null, new Header[0]);
-		rh.executePutRequest("sf/ships/0", "{\"number\" : \"NCC-1701-D\"}", new Header[0]);
-		rh.executePutRequest("sf/public/0", "{\"some\" : \"value\"}", new Header[0]);
+		rh.executePutRequest("sf/_doc/0", "{\"number\" : \"NCC-1701-D\"}", new Header[0]);
+		rh.executePutRequest("sf/_doc/0", "{\"some\" : \"value\"}", new Header[0]);
 		rh.sendAdminCertificate = sendAdminCertificate;
 	}
 
@@ -260,17 +255,6 @@ public abstract class AbstractRestApiUnitTest extends SingleClusterTest {
 	protected Map<String, String> jsonStringToMap(String json) throws JsonParseException, JsonMappingException, IOException {
 		TypeReference<HashMap<String, String>> typeRef = new TypeReference<HashMap<String, String>>() {};
 		return DefaultObjectMapper.objectMapper.readValue(json, typeRef);
-	}
-
-	protected static class TransportClientImpl extends TransportClient {
-
-		public TransportClientImpl(Settings settings, Collection<Class<? extends Plugin>> plugins) {
-			super(settings, plugins);
-		}
-
-		public TransportClientImpl(Settings settings, Settings defaultSettings, Collection<Class<? extends Plugin>> plugins) {
-			super(settings, defaultSettings, plugins, null);
-		}
 	}
 
 	protected static Collection<Class<? extends Plugin>> asCollection(Class<? extends Plugin>... plugins) {

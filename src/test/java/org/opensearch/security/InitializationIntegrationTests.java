@@ -14,18 +14,14 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security;
@@ -33,33 +29,35 @@ package org.opensearch.security;
 import java.io.File;
 import java.util.Iterator;
 
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.HttpGet;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
+import org.opensearch.client.Client;
+import org.opensearch.client.Request;
+import org.opensearch.client.Response;
+import org.opensearch.client.RestHighLevelClient;
 import org.opensearch.cluster.health.ClusterHealthStatus;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.transport.TransportAddress;
-import org.junit.Assert;
-import org.junit.Test;
-
-import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
-import org.opensearch.security.action.whoami.WhoAmIAction;
-import org.opensearch.security.action.whoami.WhoAmIRequest;
-import org.opensearch.security.action.whoami.WhoAmIResponse;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.SingleClusterTest;
+import org.opensearch.security.test.helper.cluster.ClusterHelper;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
+import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 public class InitializationIntegrationTests extends SingleClusterTest {
 
@@ -78,12 +76,12 @@ public class InitializationIntegrationTests extends SingleClusterTest {
         rh.enableHTTPClientSSL = true;
         rh.trustHTTPServerCertificate = true;
         rh.sendAdminCertificate = true;
-        Assert.assertEquals(HttpStatus.SC_SERVICE_UNAVAILABLE, rh.executePutRequest(".opendistro_security/config/0", "{}", encodeBasicHeader("___", "")).getStatusCode());
-        Assert.assertEquals(HttpStatus.SC_SERVICE_UNAVAILABLE, rh.executePutRequest(".opendistro_security/"+getType()+"/config", "{}", encodeBasicHeader("___", "")).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_SERVICE_UNAVAILABLE, rh.executePutRequest(".opendistro_security/_doc/0", "{}", encodeBasicHeader("___", "")).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_SERVICE_UNAVAILABLE, rh.executePutRequest(".opendistro_security/_doc/config", "{}", encodeBasicHeader("___", "")).getStatusCode());
         
         
         rh.keystore = "kirk-keystore.jks";
-        Assert.assertEquals(HttpStatus.SC_CREATED, rh.executePutRequest(".opendistro_security/"+getType()+"/config", "{}", encodeBasicHeader("___", "")).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_CREATED, rh.executePutRequest(".opendistro_security/_doc/config", "{}", encodeBasicHeader("___", "")).getStatusCode());
     
         Assert.assertFalse(rh.executeSimpleRequest("_nodes/stats?pretty").contains("\"tx_size_in_bytes\" : 0"));
         Assert.assertFalse(rh.executeSimpleRequest("_nodes/stats?pretty").contains("\"rx_count\" : 0"));
@@ -104,34 +102,29 @@ public class InitializationIntegrationTests extends SingleClusterTest {
 
         RestHelper rh = nonSslRestHelper();
 
-        Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, rh.executePutRequest(".opendistro_security/config/0", "{}", encodeBasicHeader("___", "")).getStatusCode());
-        Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, rh.executePutRequest(".opendistro_security/sg/config", "{}", encodeBasicHeader("___", "")).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, rh.executePutRequest(".opendistro_security/_doc/0", "{}", encodeBasicHeader("___", "")).getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, rh.executePutRequest(".opendistro_security/_doc/config", "{}", encodeBasicHeader("___", "")).getStatusCode());
 
     }
 
     @Test
     public void testWhoAmI() throws Exception {
+        final Settings settings = Settings.builder()
+                .put("plugins.security.ssl.http.enabled",true)
+                .put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
+                .put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"))
+                .build();
         setup(Settings.EMPTY, new DynamicSecurityConfig().setSecurityInternalUsers("internal_empty.yml")
-                .setSecurityRoles("roles_deny.yml"), Settings.EMPTY, true);
-        
-        try (TransportClient tc = getUserTransportClient(clusterInfo, "spock-keystore.jks", Settings.EMPTY)) {  
-            WhoAmIResponse wres = tc.execute(WhoAmIAction.INSTANCE, new WhoAmIRequest()).actionGet();
-            System.out.println(wres);
-            Assert.assertEquals(wres.toString(), "CN=spock,OU=client,O=client,L=Test,C=DE", wres.getDn());
-            Assert.assertFalse(wres.toString(), wres.isAdmin());
-            Assert.assertFalse(wres.toString(), wres.isAuthenticated());
-            Assert.assertFalse(wres.toString(), wres.isNodeCertificateRequest());
+                .setSecurityRoles("roles_deny.yml"), settings, true);
 
-        }
-        
-        try (TransportClient tc = getUserTransportClient(clusterInfo, "node-0-keystore.jks", Settings.EMPTY)) {  
-            WhoAmIResponse wres = tc.execute(WhoAmIAction.INSTANCE, new WhoAmIRequest()).actionGet();    
-            System.out.println(wres);
-            Assert.assertEquals(wres.toString(), "CN=node-0.example.com,OU=SSL,O=Test,L=Test,C=DE", wres.getDn());
-            Assert.assertFalse(wres.toString(), wres.isAdmin());
-            Assert.assertFalse(wres.toString(), wres.isAuthenticated());
-            Assert.assertTrue(wres.toString(), wres.isNodeCertificateRequest());
-
+        try (RestHighLevelClient restHighLevelClient = getRestClient(clusterInfo, "spock-keystore.jks", "truststore.jks")) {
+            Response whoAmIRes = restHighLevelClient.getLowLevelClient().performRequest(new Request("GET", "/_plugins/_security/whoami"));
+            Assert.assertEquals(whoAmIRes.getStatusLine().getStatusCode(), 200);
+            JsonNode whoAmIResNode = DefaultObjectMapper.objectMapper.readTree(whoAmIRes.getEntity().getContent());
+            String whoAmIResponsePayload = whoAmIResNode.toPrettyString();
+            Assert.assertEquals(whoAmIResponsePayload, "CN=spock,OU=client,O=client,L=Test,C=DE", whoAmIResNode.get("dn").asText());
+            Assert.assertFalse(whoAmIResponsePayload, whoAmIResNode.get("is_admin").asBoolean());
+            Assert.assertFalse(whoAmIResponsePayload, whoAmIResNode.get("is_node_certificate_request").asBoolean());
         }
     }
     
@@ -150,9 +143,9 @@ public class InitializationIntegrationTests extends SingleClusterTest {
             Assert.assertTrue(res.getBody().contains("vulcan"));
         }
         
-        try (TransportClient tc = getInternalTransportClient()) {   
+        try (Client tc = getClient()) {
             Assert.assertEquals(clusterInfo.numNodes, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
-            tc.index(new IndexRequest(".opendistro_security").type(getType()).setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("internalusers").source("internalusers", FileHelper.readYamlContent("internal_users_spock_add_roles.yml"))).actionGet();
+            tc.index(new IndexRequest(".opendistro_security").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("internalusers").source("internalusers", FileHelper.readYamlContent("internal_users_spock_add_roles.yml"))).actionGet();
             ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new String[]{"config","roles","rolesmapping","internalusers","actiongroups"})).actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());   
         } 
@@ -167,9 +160,9 @@ public class InitializationIntegrationTests extends SingleClusterTest {
             Assert.assertFalse(res.getBody().contains("starfleet"));
         }
         
-        try (TransportClient tc = getInternalTransportClient()) {    
+        try (Client tc = getClient()) {
             Assert.assertEquals(clusterInfo.numNodes, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
-            tc.index(new IndexRequest(".opendistro_security").type(getType()).setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("config").source("config", FileHelper.readYamlContent("config_anon.yml"))).actionGet();
+            tc.index(new IndexRequest(".opendistro_security").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("config").source("config", FileHelper.readYamlContent("config_anon.yml"))).actionGet();
             ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new String[]{"config"})).actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());   
         }
@@ -202,9 +195,8 @@ public class InitializationIntegrationTests extends SingleClusterTest {
 
     @Test
     public void testInvalidDefaultConfig() throws Exception {
-        String defaultInitDirectory = System.getProperty("security.default_init.dir");
         try {
-            System.setProperty("security.default_init.dir", new File("./src/test/resources/invalid_config").getAbsolutePath());
+            final String defaultInitDirectory = ClusterHelper.updateDefaultDirectory(new File(TEST_RESOURCE_RELATIVE_PATH + "invalid_config").getAbsolutePath());
             final Settings settings = Settings.builder()
                     .put(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true)
                     .build();
@@ -213,17 +205,13 @@ public class InitializationIntegrationTests extends SingleClusterTest {
             Thread.sleep(10000);
             Assert.assertEquals(HttpStatus.SC_SERVICE_UNAVAILABLE, rh.executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode());
 
-            System.setProperty("security.default_init.dir", defaultInitDirectory);
+            ClusterHelper.updateDefaultDirectory(defaultInitDirectory);
             restart(Settings.EMPTY, null, settings, false);
             rh = nonSslRestHelper();
             Thread.sleep(10000);
             Assert.assertEquals(HttpStatus.SC_OK, rh.executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode());
         } finally {
-            if (defaultInitDirectory != null) {
-                System.setProperty("security.default_init.dir", defaultInitDirectory);
-            } else {
-                System.clearProperty("security.default_init.dir");
-            }
+            ClusterHelper.resetSystemProperties();
         }
     }
 

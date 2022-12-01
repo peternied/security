@@ -1,59 +1,43 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.rest.api;
 
 import java.util.List;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.security.DefaultObjectMapper;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.dlic.rest.validation.AbstractConfigurationValidator;
 import org.opensearch.security.support.SecurityJsonNode;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
-import com.google.common.collect.ImmutableList;
 
-import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
-@RunWith(Parameterized.class)
 public class RolesApiTest extends AbstractRestApiUnitTest {
-
-    private final String ENDPOINT;
-
-    public RolesApiTest(String endpoint){
-        ENDPOINT = endpoint;
+    private final String ENDPOINT; 
+    protected String getEndpointPrefix() {
+        return PLUGINS_PREFIX;
     }
 
-    @Parameterized.Parameters
-    public static Iterable<String> endpoints() {
-        return ImmutableList.of(
-                LEGACY_OPENDISTRO_PREFIX + "/api",
-                PLUGINS_PREFIX + "/api"
-        );
+    public RolesApiTest(){
+        ENDPOINT = getEndpointPrefix() + "/api";
     }
-
 
     @Test
     public void testPutRole() throws Exception {
@@ -176,11 +160,8 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
 
         // add user picard, role starfleet, maps to opendistro_security_role_starfleet
         addUserWithPassword("picard", "picard", new String[] { "starfleet", "captains" }, HttpStatus.SC_CREATED);
-        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-
-        // ES7 only supports one doc type, so trying to create a second one leads to 400  BAD REQUEST
-        checkWriteAccess(HttpStatus.SC_BAD_REQUEST, "picard", "picard", "sf", "public", 0);
+        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
+        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
 
 
         // -- DELETE
@@ -207,18 +188,18 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
         rh.sendAdminCertificate = false;
 
         // user has only role starfleet left, role has READ access only
-        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 1);
+        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 1);
 
         // ES7 only supports one doc type, but OpenSearch permission checks run first
         // So we also get a 403 FORBIDDEN when tring to add new document type
-        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "public", 0);
+        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
 
         rh.sendAdminCertificate = true;
         // remove also starfleet role, nothing is allowed anymore
         response = rh.executeDeleteRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet", new Header[0]);
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
-        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "ships", 0);
+        checkReadAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
+        checkWriteAccess(HttpStatus.SC_FORBIDDEN, "picard", "picard", "sf", "_doc", 0);
 
         // -- PUT
         // put with empty roles, must fail
@@ -268,16 +249,14 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
                 FileHelper.loadFile("restapi/roles_starfleet.json"), new Header[0]);
         Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());
         rh.sendAdminCertificate = false;
-        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
+        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
 
         // now picard is only in opendistro_security_role_starfleet, which has write access to
         // all indices. We collapse all document types in ODFE7 so this permission in the
         // starfleet role grants all permissions:
-        //   public:
+        //   _doc:
         //       - 'indices:*'
-        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-        // ES7 only supports one doc type, so trying to create a second one leads to 400  BAD REQUEST
-        checkWriteAccess(HttpStatus.SC_BAD_REQUEST, "picard", "picard", "sf", "public", 0);
+        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
 
         rh.sendAdminCertificate = true;
 
@@ -286,21 +265,18 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
                 FileHelper.loadFile("restapi/roles_captains.json"), new Header[0]);
         Assert.assertEquals(HttpStatus.SC_CREATED, response.getStatusCode());
         rh.sendAdminCertificate = false;
-        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "ships", 0);
-
-        // ES7 only supports one doc type, so trying to create a second one leads to 400  BAD REQUEST
-        checkWriteAccess(HttpStatus.SC_BAD_REQUEST, "picard", "picard", "sf", "public", 0);
+        checkReadAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
+        checkWriteAccess(HttpStatus.SC_OK, "picard", "picard", "sf", "_doc", 0);
 
         rh.sendAdminCertificate = true;
         response = rh.executePutRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet_captains",
                 FileHelper.loadFile("restapi/roles_complete_invalid.json"), new Header[0]);
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 
-//		rh.sendAdminCertificate = true;
-//		response = rh.executePutRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet_captains",
-//				FileHelper.loadFile("restapi/roles_multiple.json"), new Header[0]);
-//		Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
+//        rh.sendAdminCertificate = true;
+//        response = rh.executePutRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet_captains",
+//                FileHelper.loadFile("restapi/roles_multiple.json"), new Header[0]);
+//        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
 
         response = rh.executePutRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet_captains",
                 FileHelper.loadFile("restapi/roles_multiple_2.json"), new Header[0]);
@@ -400,12 +376,12 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
         /*
          * how to patch with new v7 config format?
          * rh.sendAdminCertificate = true;
-        response = rh.executePatchRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet", "[{ \"op\": \"add\", \"path\": \"/index_permissions/sf/ships/-\", \"value\": \"SEARCH\" }]", new Header[0]);
+        response = rh.executePatchRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet", "[{ \"op\": \"add\", \"path\": \"/index_permissions/sf/_doc/-\", \"value\": \"SEARCH\" }]", new Header[0]);
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
         response = rh.executeGetRequest(ENDPOINT + "/roles/opendistro_security_role_starfleet", new Header[0]);
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
         settings = DefaultObjectMapper.readTree(response.getBody());
-        permissions = DefaultObjectMapper.objectMapper.convertValue(settings.get("opendistro_security_role_starfleet").get("indices").get("sf").get("ships"), List.class);
+        permissions = DefaultObjectMapper.objectMapper.convertValue(settings.get("opendistro_security_role_starfleet").get("indices").get("sf").get("_doc"), List.class);
         Assert.assertNotNull(permissions);
         Assert.assertEquals(2, permissions.size());
         Assert.assertTrue(permissions.contains("OPENDISTRO_SECURITY_READ"));
@@ -515,7 +491,7 @@ public class RolesApiTest extends AbstractRestApiUnitTest {
         // put hidden role
         String body = FileHelper.loadFile("restapi/roles_captains.json");
         response = rh.executePutRequest( ENDPOINT+ "/roles/opendistro_security_internal", body, new Header[0]);
-        Assert.assertEquals(org.apache.http.HttpStatus.SC_NOT_FOUND, response.getStatusCode());
+        Assert.assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatusCode());
 
         // Patch single hidden roles
         response = rh.executePatchRequest(ENDPOINT + "/roles/opendistro_security_internal", "[{ \"op\": \"replace\", \"path\": \"/description\", \"value\": \"foo\" }]", new Header[0]);

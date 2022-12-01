@@ -17,27 +17,28 @@
 
 package org.opensearch.security.ssl;
 
-import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.file.Paths;
-import java.security.KeyStore;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.TrustManagerFactory;
 
-
-import org.opensearch.security.OpenSearchSecurityPlugin;
-import org.apache.http.NoHttpResponseException;
+import io.netty.util.internal.PlatformDependent;
+import org.apache.hc.core5.http.NoHttpResponseException;
 import org.apache.lucene.util.Constants;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -45,27 +46,21 @@ import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
+import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.transport.TransportAddress;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.node.Node;
 import org.opensearch.node.PluginAwareNode;
+import org.opensearch.security.OpenSearchSecurityPlugin;
 import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.test.AbstractSecurityUnitTest;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
-import org.opensearch.transport.Netty4Plugin;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
-import io.netty.util.internal.PlatformDependent;
+import org.opensearch.transport.Netty4ModulePlugin;
 
 @SuppressWarnings({"resource", "unchecked"})
 public class SSLTest extends SingleClusterTest {
@@ -270,7 +265,7 @@ public class SSLTest extends SingleClusterTest {
     }
     
     @Test
-    public void testHttpsAndNodeSSLPem() throws Exception {
+    public void testHttpsAndNodeSSLPKCS8Pem() throws Exception {
 
         final Settings settings = Settings.builder().put("plugins.security.ssl.transport.enabled", true)
                 .put(ConfigConstants.SECURITY_SSL_ONLY, true)
@@ -303,6 +298,39 @@ public class SSLTest extends SingleClusterTest {
         Assert.assertTrue(rh.executeSimpleRequest("_opendistro/_security/sslinfo?pretty").length() > 0);
         Assert.assertTrue(rh.executeSimpleRequest("_nodes/settings?pretty").contains(clusterInfo.clustername));
         //Assert.assertTrue(!executeSimpleRequest("_opendistro/_security/sslinfo?pretty").contains("null"));
+        Assert.assertTrue(rh.executeSimpleRequest("_opendistro/_security/sslinfo?pretty").contains("CN=node-0.example.com,OU=SSL,O=Test,L=Test,C=DE"));
+    }
+
+    @Test
+    public void testHttpsAndNodeSSLPKCS1Pem() throws Exception {
+
+        final Settings settings = Settings.builder().put("plugins.security.ssl.transport.enabled", true)
+                .put(ConfigConstants.SECURITY_SSL_ONLY, true)
+                .put(SSLConfigConstants.SECURITY_SSL_HTTP_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
+                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
+                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_PEMCERT_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0.crt.pem"))
+                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_PEMKEY_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0-pkcs1.key.pem"))
+                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_PEMTRUSTEDCAS_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/root-ca.pem"))
+                .put("plugins.security.ssl.transport.enforce_hostname_verification", false)
+                .put("plugins.security.ssl.transport.resolve_hostname", false)
+
+                .put("plugins.security.ssl.http.enabled", true)
+                .put("plugins.security.ssl.http.clientauth_mode", "REQUIRE")
+                .put(SSLConfigConstants.SECURITY_SSL_HTTP_PEMCERT_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0.crt.pem"))
+                .put(SSLConfigConstants.SECURITY_SSL_HTTP_PEMKEY_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0-pkcs1.key.pem"))
+                .put(SSLConfigConstants.SECURITY_SSL_HTTP_PEMTRUSTEDCAS_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/root-ca.pem"))
+                .build();
+
+        setupSslOnlyMode(settings);
+
+        RestHelper rh = restHelper();
+        rh.enableHTTPClientSSL = true;
+        rh.trustHTTPServerCertificate = true;
+        rh.sendAdminCertificate = true;
+
+        Assert.assertTrue(rh.executeSimpleRequest("_opendistro/_security/sslinfo?pretty").contains("TLS"));
+        Assert.assertTrue(rh.executeSimpleRequest("_opendistro/_security/sslinfo?pretty").length() > 0);
+        Assert.assertTrue(rh.executeSimpleRequest("_nodes/settings?pretty").contains(clusterInfo.clustername));
         Assert.assertTrue(rh.executeSimpleRequest("_opendistro/_security/sslinfo?pretty").contains("CN=node-0.example.com,OU=SSL,O=Test,L=Test,C=DE"));
     }
 
@@ -483,111 +511,6 @@ public class SSLTest extends SingleClusterTest {
         Assert.assertTrue(rh.executeSimpleRequest("_nodes/settings?pretty").contains(clusterInfo.clustername));
     }
 
-    // transport
-    @Test
-    public void testTransportClientSSL() throws Exception {
-
-        final Settings settings = Settings.builder().put("plugins.security.ssl.transport.enabled", true)
-                .put(ConfigConstants.SECURITY_SSL_ONLY, true)
-                .put(SSLConfigConstants.SECURITY_SSL_HTTP_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_KEYSTORE_ALIAS, "node-0")
-                .put("plugins.security.ssl.transport.keystore_filepath", FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0-keystore.jks"))
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_TRUSTSTORE_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/truststore.jks"))
-                .put("plugins.security.ssl.transport.enforce_hostname_verification", false)
-                .put("plugins.security.ssl.transport.resolve_hostname", false).build();
-
-        setupSslOnlyMode(settings);
-        
-        log.debug("OpenSearch started");
-
-        final Settings tcSettings = Settings.builder().put("cluster.name", clusterInfo.clustername).put(settings).build();
-
-        try (TransportClient tc = new TransportClientImpl(tcSettings, asCollection(OpenSearchSecurityPlugin.class))) {
-            
-            log.debug("TransportClient built, connect now to {}:{}", clusterInfo.nodeHost, clusterInfo.nodePort);
-            
-            tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
-            Assert.assertEquals(3, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());            
-            log.debug("TransportClient connected");           
-            Assert.assertEquals("test", tc.index(new IndexRequest("test","test").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"a\":5}", XContentType.JSON)).actionGet().getIndex());            
-            log.debug("Index created");           
-            Assert.assertEquals(1L, tc.search(new SearchRequest("test")).actionGet().getHits().getTotalHits().value);
-            log.debug("Search done");
-            Assert.assertEquals(3, tc.admin().cluster().health(new ClusterHealthRequest("test")).actionGet().getNumberOfNodes());
-            log.debug("ClusterHealth done");            
-            Assert.assertEquals(3, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());           
-            log.debug("NodesInfoRequest asserted");
-        }
-    }
-
-    @Test
-    public void testTransportClientSSLExternalContext() throws Exception {
-
-        final Settings settings = Settings.builder().put("plugins.security.ssl.transport.enabled", true)
-                .put(ConfigConstants.SECURITY_SSL_ONLY, true)
-                .put(SSLConfigConstants.SECURITY_SSL_HTTP_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_KEYSTORE_ALIAS, "node-0")
-                .put("plugins.security.ssl.transport.keystore_filepath", FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0-keystore.jks"))
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_TRUSTSTORE_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/truststore.jks"))
-                .put("plugins.security.ssl.transport.enforce_hostname_verification", false)
-                .put("plugins.security.ssl.transport.resolve_hostname", false).build();
-
-        setupSslOnlyMode(settings);
-        
-        log.debug("OpenSearch started");
-
-        final Settings tcSettings = Settings.builder()
-                .put("cluster.name", clusterInfo.clustername)
-                .put("path.home", ".")
-                .put("plugins.security.ssl.client.external_context_id", "abcx")
-                .build();
-
-        final TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory
-                .getDefaultAlgorithm());
-        final KeyStore trustStore = KeyStore.getInstance("JKS");
-        trustStore.load(this.getClass().getResourceAsStream("/truststore.jks"), "changeit".toCharArray());
-        tmf.init(trustStore);
-
-        final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory
-                .getDefaultAlgorithm());
-        final KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(this.getClass().getResourceAsStream("/node-0-keystore.jks"), "changeit".toCharArray());        
-        kmf.init(keyStore, "changeit".toCharArray());
-        
-        
-        SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-        sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-        ExternalSecurityKeyStore.registerExternalSslContext("abcx", sslContext);
-        
-        try (TransportClient tc = new TransportClientImpl(tcSettings, asCollection(OpenSearchSecurityPlugin.class))) {
-            
-            log.debug("TransportClient built, connect now to {}:{}", clusterInfo.nodeHost, clusterInfo.nodePort);
-            
-            tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
-            
-            log.debug("TransportClient connected");
-            
-            Assert.assertEquals("test", tc.index(new IndexRequest("test","test").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"a\":5}", XContentType.JSON)).actionGet().getIndex());
-            
-            log.debug("Index created");
-            
-            Assert.assertEquals(1L, tc.search(new SearchRequest("test")).actionGet().getHits().getTotalHits().value);
-
-            log.debug("Search done");
-            
-            Assert.assertEquals(3, tc.admin().cluster().health(new ClusterHealthRequest("test")).actionGet().getNumberOfNodes());
-
-            log.debug("ClusterHealth done");
-            
-            //Assert.assertEquals(3, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().length);
-            
-            //log.debug("NodesInfoRequest asserted");
-            
-        }
-    }
-
     @Test
     public void testNodeClientSSL() throws Exception {
 
@@ -606,11 +529,9 @@ public class SSLTest extends SingleClusterTest {
 
         RestHelper rh = nonSslRestHelper();
 
-        final Settings tcSettings = Settings.builder().put("cluster.name", clusterInfo.clustername).put("path.home", ".")
+        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false) 
+                .put("cluster.name", clusterInfo.clustername).put("path.home", ".")
                 .put("node.name", "client_node_" + new Random().nextInt())
-                .put("node.data", false)
-                .put("node.master", false)
-                .put("node.ingest", false)
                 .put("path.data", "./target/data/"+clusterInfo.clustername+"/ssl/data")
                 .put("path.logs", "./target/data/"+clusterInfo.clustername+"/ssl/logs")
                 .put("path.home", "./target")
@@ -619,7 +540,7 @@ public class SSLTest extends SingleClusterTest {
                 .put(settings)// -----
                 .build();
 
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class).start()) {
+        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class).start()) {
             ClusterHealthResponse res = node.client().admin().cluster().health(new ClusterHealthRequest().waitForNodes("4").timeout(TimeValue.timeValueSeconds(15))).actionGet();
             Assert.assertFalse(res.isTimedOut());
             Assert.assertEquals(4, res.getNumberOfNodes());
@@ -630,35 +551,6 @@ public class SSLTest extends SingleClusterTest {
         Assert.assertFalse(rh.executeSimpleRequest("_nodes/stats?pretty").contains("\"rx_count\" : 0"));
         Assert.assertFalse(rh.executeSimpleRequest("_nodes/stats?pretty").contains("\"rx_size_in_bytes\" : 0"));
         Assert.assertFalse(rh.executeSimpleRequest("_nodes/stats?pretty").contains("\"tx_count\" : 0"));
-    }
-
-    @Test
-    public void testTransportClientSSLFail() throws Exception {
-        thrown.expect(IllegalStateException.class);
-
-        final Settings settings = Settings.builder().put("plugins.security.ssl.transport.enabled", true)
-                .put(ConfigConstants.SECURITY_SSL_ONLY, true)
-                .put(SSLConfigConstants.SECURITY_SSL_HTTP_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLE_OPENSSL_IF_AVAILABLE, allowOpenSSL)
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_KEYSTORE_ALIAS, "node-0")
-                .put("plugins.security.ssl.transport.keystore_filepath", FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0-keystore.jks"))
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_TRUSTSTORE_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/truststore.jks"))
-                .put("plugins.security.ssl.transport.enforce_hostname_verification", false)
-                .put("plugins.security.ssl.transport.resolve_hostname", false).build();
-
-        setupSslOnlyMode(settings);
-
-        final Settings tcSettings = Settings.builder().put("cluster.name", clusterInfo.clustername)
-                .put("path.home", FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0-keystore.jks").getParent())
-                .put("plugins.security.ssl.transport.keystore_filepath", FileHelper. getAbsoluteFilePathFromClassPath("ssl/node-0-keystore.jks"))
-                .put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_TRUSTSTORE_FILEPATH, FileHelper. getAbsoluteFilePathFromClassPath("ssl/truststore_fail.jks"))
-                .put("plugins.security.ssl.transport.enforce_hostname_verification", false)
-                .put("plugins.security.ssl.transport.resolve_hostname", false).build();
-
-        try (TransportClient tc = new TransportClientImpl(tcSettings, asCollection(OpenSearchSecurityPlugin.class))) {
-            tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
-            Assert.assertEquals(3, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
-        }
     }
 
     @Test
@@ -720,15 +612,14 @@ public class SSLTest extends SingleClusterTest {
 
         final Settings tcSettings = Settings.builder().put("cluster.name", clusterInfo.clustername).put("path.home", ".").put(settings).build();
 
-        try (TransportClient tc = new TransportClientImpl(tcSettings, asCollection(OpenSearchSecurityPlugin.class))) {
+        try (Client tc = getClient()) {
             
-            log.debug("TransportClient built, connect now to {}:{}", clusterInfo.nodeHost, clusterInfo.nodePort);
+            log.debug("Client built, connect now to {}:{}", clusterInfo.nodeHost, clusterInfo.httpPort);
             
-            tc.addTransportAddress(new TransportAddress(new InetSocketAddress(clusterInfo.nodeHost, clusterInfo.nodePort)));
-            Assert.assertEquals(3, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());            
-            log.debug("TransportClient connected");
+            Assert.assertEquals(3, tc.admin().cluster().nodesInfo(new NodesInfoRequest()).actionGet().getNodes().size());
+            log.debug("Client connected");
             TestPrincipalExtractor.reset();
-            Assert.assertEquals("test", tc.index(new IndexRequest("test","test").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"a\":5}", XContentType.JSON)).actionGet().getIndex());            
+            Assert.assertEquals("test", tc.index(new IndexRequest("test").setRefreshPolicy(RefreshPolicy.IMMEDIATE).source("{\"a\":5}", XContentType.JSON)).actionGet().getIndex());
             log.debug("Index created");           
             Assert.assertEquals(1L, tc.search(new SearchRequest("test")).actionGet().getHits().getTotalHits().value);
             log.debug("Search done");
@@ -840,7 +731,7 @@ public class SSLTest extends SingleClusterTest {
                 .put(settings)// -----
                 .build();
 
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class).start()) {
+        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class).start()) {
             ClusterHealthResponse res = node.client().admin().cluster().health(new ClusterHealthRequest().waitForNodes("4").timeout(TimeValue.timeValueSeconds(5))).actionGet();
             Assert.assertFalse(res.isTimedOut());
             Assert.assertEquals(4, res.getNumberOfNodes());

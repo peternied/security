@@ -14,18 +14,14 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security;
@@ -34,20 +30,26 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opensearch.security.tools.SecurityAdmin;
-import org.apache.http.HttpStatus;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
+import org.opensearch.security.tools.SecurityAdmin;
 
 public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 
 	@Test
 	public void testSecurityAdminDuplicateKey() throws Exception {
-		setup();
+		final Settings settings = Settings.builder()
+				.put("plugins.security.ssl.http.enabled",true)
+				.put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
+				.put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"))
+				.build();
+		setup(settings);
 
 		final String prefix = getResourceFolder()==null?"":getResourceFolder()+"/";
 
@@ -57,7 +59,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		argsAsList.add("-ks");
 		argsAsList.add(FileHelper.getAbsoluteFilePathFromClassPath(prefix+"kirk-keystore.jks").toFile().getAbsolutePath());
 		argsAsList.add("-p");
-		argsAsList.add(String.valueOf(clusterInfo.nodePort));
+		argsAsList.add(String.valueOf(clusterInfo.httpPort));
 		argsAsList.add("-cn");
 		argsAsList.add(clusterInfo.clustername);
 		argsAsList.add("-cd");
@@ -68,7 +70,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		int returnCode  = SecurityAdmin.execute(argsAsList.toArray(new String[0]));
 		Assert.assertNotEquals(0, returnCode);
 
-		RestHelper rh = nonSslRestHelper();
+		RestHelper rh = restHelper();
 
 		Assert.assertEquals(HttpStatus.SC_OK, (rh.executeGetRequest("_opendistro/_security/health?pretty")).getStatusCode());
 		Assert.assertEquals(HttpStatus.SC_OK, rh.executeGetRequest("_opendistro/_security/authinfo?pretty", encodeBasicHeader("nagilum", "nagilum")).getStatusCode());
@@ -87,7 +89,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		argsAsList.add("-ks");
 		argsAsList.add(FileHelper.getAbsoluteFilePathFromClassPath(prefix+"kirk-keystore.jks").toFile().getAbsolutePath());
 		argsAsList.add("-p");
-		argsAsList.add(String.valueOf(clusterInfo.nodePort));
+		argsAsList.add(String.valueOf(clusterInfo.httpPort));
 		argsAsList.add("-cn");
 		argsAsList.add(clusterInfo.clustername);
 		argsAsList.add("-rl");
@@ -97,7 +99,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		int returnCode  = SecurityAdmin.execute(argsAsList.toArray(new String[0]));
 		Assert.assertEquals(0, returnCode);
 
-		RestHelper rh = nonSslRestHelper();
+		RestHelper rh = restHelper();
 
 		Assert.assertEquals(HttpStatus.SC_OK, (rh.executeGetRequest("_opendistro/_security/health?pretty")).getStatusCode());
 		Assert.assertEquals(HttpStatus.SC_OK, rh.executeGetRequest("_opendistro/_security/authinfo?pretty", encodeBasicHeader("nagilum", "nagilum")).getStatusCode());
@@ -106,7 +108,12 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 
 	@Test
 	public void testSecurityAdminDuplicateKeySingleFile() throws Exception {
-		setup();
+		final Settings settings = Settings.builder()
+				.put("plugins.security.ssl.http.enabled",true)
+				.put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("node-0-keystore.jks"))
+				.put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("truststore.jks"))
+				.build();
+		setup(settings);
 
 		final String prefix = getResourceFolder()==null?"":getResourceFolder()+"/";
 
@@ -116,7 +123,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		argsAsList.add("-ks");
 		argsAsList.add(FileHelper.getAbsoluteFilePathFromClassPath(prefix+"kirk-keystore.jks").toFile().getAbsolutePath());
 		argsAsList.add("-p");
-		argsAsList.add(String.valueOf(clusterInfo.nodePort));
+		argsAsList.add(String.valueOf(clusterInfo.httpPort));
 		argsAsList.add("-cn");
 		argsAsList.add(clusterInfo.clustername);
 		argsAsList.add("-f");
@@ -129,7 +136,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		int returnCode  = SecurityAdmin.execute(argsAsList.toArray(new String[0]));
 		Assert.assertNotEquals(0, returnCode);
 
-		RestHelper rh = nonSslRestHelper();
+		RestHelper rh = restHelper();
 
 		Assert.assertEquals(HttpStatus.SC_OK, (rh.executeGetRequest("_opendistro/_security/health?pretty")).getStatusCode());
 		Assert.assertEquals(HttpStatus.SC_OK, rh.executeGetRequest("_opendistro/_security/authinfo?pretty", encodeBasicHeader("nagilum", "nagilum")).getStatusCode());
@@ -148,7 +155,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		argsAsList.add("-ks");
 		argsAsList.add(FileHelper.getAbsoluteFilePathFromClassPath(prefix+"kirk-keystore.jks").toFile().getAbsolutePath());
 		argsAsList.add("-p");
-		argsAsList.add(String.valueOf(clusterInfo.nodePort));
+		argsAsList.add(String.valueOf(clusterInfo.httpPort));
 		argsAsList.add("-cn");
 		argsAsList.add(clusterInfo.clustername);
 		argsAsList.add("-rl");
@@ -158,7 +165,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
 		int returnCode  = SecurityAdmin.execute(argsAsList.toArray(new String[0]));
 		Assert.assertEquals(0, returnCode);
 
-		RestHelper rh = nonSslRestHelper();
+		RestHelper rh = restHelper();
 
 		Assert.assertEquals(HttpStatus.SC_OK, (rh.executeGetRequest("_opendistro/_security/health?pretty")).getStatusCode());
 		Assert.assertEquals(HttpStatus.SC_OK, rh.executeGetRequest("_opendistro/_security/authinfo?pretty", encodeBasicHeader("nagilum", "nagilum")).getStatusCode());

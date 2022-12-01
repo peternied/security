@@ -203,10 +203,17 @@ public class IndexPatternTests {
             indexMap.put(indexShorthand.name, indexAbstraction);    
         });
 
+<<<<<<< HEAD
         final Metadata mockMetadata = mock(Metadata.class, withSettings().lenient());
         when(mockMetadata.getIndicesLookup()).thenReturn(indexMap);
 
         final ClusterState mockClusterState = mock(ClusterState.class, withSettings().lenient());
+=======
+        final Metadata mockMetadata = mock(Metadata.class, withSettings().strictness(Strictness.LENIENT));
+        when(mockMetadata.getIndicesLookup()).thenReturn(indexMap);
+
+        final ClusterState mockClusterState = mock(ClusterState.class, withSettings().strictness(Strictness.LENIENT));
+>>>>>>> origin/main
         when(mockClusterState.getMetadata()).thenReturn(mockMetadata);
 
         return mockClusterState;

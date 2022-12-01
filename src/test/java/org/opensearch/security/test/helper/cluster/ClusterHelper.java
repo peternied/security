@@ -14,22 +14,19 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.test.helper.cluster;
 
+// CS-SUPPRESS-SINGLE: RegexpSingleline https://github.com/opensearch-project/OpenSearch/issues/3663
 import java.io.File;
 import java.io.IOException;
 import java.util.Comparator;
@@ -39,12 +36,19 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+<<<<<<< HEAD
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+=======
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+>>>>>>> origin/main
 import org.opensearch.OpenSearchTimeoutException;
 import org.opensearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.opensearch.action.admin.cluster.node.info.NodeInfo;
@@ -62,19 +66,39 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.http.HttpInfo;
 import org.opensearch.node.Node;
 import org.opensearch.node.PluginAwareNode;
+import org.opensearch.security.test.AbstractSecurityUnitTest;
+import org.opensearch.security.test.NodeSettingsSupplier;
+import org.opensearch.security.test.SingleClusterTest;
+import org.opensearch.security.test.helper.cluster.ClusterConfiguration.NodeSettings;
 import org.opensearch.security.test.helper.network.SocketUtils;
 import org.opensearch.transport.TransportInfo;
-
-import org.opensearch.security.test.helper.cluster.ClusterConfiguration.NodeSettings;
-import org.opensearch.security.test.NodeSettingsSupplier;
+// CS-ENFORCE-SINGLE
 
 public final class ClusterHelper {
 
     static {
+        resetSystemProperties();
+    }
+    
+    /** Resets all system properties associated with a cluster */
+    public static void resetSystemProperties() {
         System.setProperty("opensearch.enforce.bootstrap.checks", "true");
-        System.setProperty("security.default_init.dir", new File("./securityconfig").getAbsolutePath());
+        updateDefaultDirectory(new File( SingleClusterTest.PROJECT_ROOT_RELATIVE_PATH + "config").getAbsolutePath());
     }
 
+<<<<<<< HEAD
+=======
+    /**
+     * Update the default directory used by the security plugin
+     * NOTE: this setting is system wide, use ClusterHelper.resetSystemProperties() to restore the original state
+     * 
+     * @return the previous value if one was set, otherwise null
+     */
+    public static String updateDefaultDirectory(final String newValue) {
+        return System.setProperty("security.default_init.dir", newValue);
+    }
+
+>>>>>>> origin/main
     protected final Logger log = LogManager.getLogger(ClusterHelper.class);
 
     protected final List<PluginAwareNode> opensearchNodes = new LinkedList<>();
@@ -133,35 +157,40 @@ public final class ClusterHelper {
 
         final SortedSet<Integer> freePorts = SocketUtils.findAvailableTcpPorts(internalNodeSettings.size()*2, min, max);
         assert freePorts.size() == internalNodeSettings.size()*2;
-        final SortedSet<Integer> tcpMasterPortsOnly = new TreeSet<Integer>();
+        final SortedSet<Integer> tcpClusterManagerPortsOnly = new TreeSet<Integer>();
         final SortedSet<Integer> tcpAllPorts = new TreeSet<Integer>();
-        freePorts.stream().limit(clusterConfiguration.getMasterNodes()).forEach(el->tcpMasterPortsOnly.add(el));
+        freePorts.stream().limit(clusterConfiguration.getClusterManagerNodes()).forEach(el->tcpClusterManagerPortsOnly.add(el));
         freePorts.stream().limit(internalNodeSettings.size()).forEach(el->tcpAllPorts.add(el));
 
-        //final Iterator<Integer> tcpPortsMasterOnlyIt = tcpMasterPortsOnly.iterator();
         final Iterator<Integer> tcpPortsAllIt = tcpAllPorts.iterator();
 
         final SortedSet<Integer> httpPorts = new TreeSet<Integer>();
         freePorts.stream().skip(internalNodeSettings.size()).limit(internalNodeSettings.size()).forEach(el->httpPorts.add(el));
         final Iterator<Integer> httpPortsIt = httpPorts.iterator();
 
-        System.out.println("tcpMasterPorts: "+tcpMasterPortsOnly+"/tcpAllPorts: "+tcpAllPorts+"/httpPorts: "+httpPorts+" for ("+min+"-"+max+") fork "+forkNumber);
+        System.out.println("tcpClusterManagerPorts: "+tcpClusterManagerPortsOnly+"/tcpAllPorts: "+tcpAllPorts+"/httpPorts: "+httpPorts+" for ("+min+"-"+max+") fork "+forkNumber);
 
         final CountDownLatch latch = new CountDownLatch(internalNodeSettings.size());
 
         final AtomicReference<Exception> err = new AtomicReference<Exception>();
 
-        List<NodeSettings> internalMasterNodeSettings = clusterConfiguration.getMasterNodeSettings();
-        List<NodeSettings> internalNonMasterNodeSettings = clusterConfiguration.getNonMasterNodeSettings();
+        List<NodeSettings> internalClusterManagerNodeSettings = clusterConfiguration.getClusterManagerNodeSettings();
+        List<NodeSettings> internalNonClusterManagerNodeSettings = clusterConfiguration.getNonClusterManagerNodeSettings();
 
         int nodeNumCounter = internalNodeSettings.size();
 
-        for (int i = 0; i < internalMasterNodeSettings.size(); i++) {
-            NodeSettings setting = internalMasterNodeSettings.get(i);
+        for (int i = 0; i < internalClusterManagerNodeSettings.size(); i++) {
+            NodeSettings setting = internalClusterManagerNodeSettings.get(i);
             int nodeNum = nodeNumCounter--;
-            PluginAwareNode node = new PluginAwareNode(setting.masterNode,
-                    getMinimumNonSecurityNodeSettingsBuilder(nodeNum, setting.masterNode, setting.dataNode, internalNodeSettings.size(), tcpMasterPortsOnly, tcpPortsAllIt.next(), httpPortsIt.next())
-                            .put(nodeSettingsSupplier == null ? Settings.Builder.EMPTY_SETTINGS : nodeSettingsSupplier.get(nodeNum)).build(), setting.getPlugins());
+            final Settings.Builder nodeSettingsBuilder = getMinimumNonSecurityNodeSettingsBuilder(nodeNum, setting.clusterManagerNode, setting.dataNode, internalNodeSettings.size(), tcpClusterManagerPortsOnly, tcpPortsAllIt.next(), httpPortsIt.next());
+            final Settings settingsForNode;
+            if (nodeSettingsSupplier != null) {
+                final Settings suppliedSettings = nodeSettingsSupplier.get(nodeNum);
+                settingsForNode = AbstractSecurityUnitTest.mergeNodeRolesAndSettings(nodeSettingsBuilder, suppliedSettings).build();
+            } else {
+                settingsForNode = nodeSettingsBuilder.build();
+            }
+            PluginAwareNode node = new PluginAwareNode(setting.clusterManagerNode, settingsForNode, setting.getPlugins());
             System.out.println(node.settings());
 
             new Thread(new Runnable() {
@@ -182,12 +211,18 @@ public final class ClusterHelper {
             opensearchNodes.add(node);
         }
 
-        for (int i = 0; i < internalNonMasterNodeSettings.size(); i++) {
-            NodeSettings setting = internalNonMasterNodeSettings.get(i);
+        for (int i = 0; i < internalNonClusterManagerNodeSettings.size(); i++) {
+            NodeSettings setting = internalNonClusterManagerNodeSettings.get(i);
             int nodeNum = nodeNumCounter--;
-            PluginAwareNode node = new PluginAwareNode(setting.masterNode,
-                    getMinimumNonSecurityNodeSettingsBuilder(nodeNum, setting.masterNode, setting.dataNode, internalNodeSettings.size(), tcpMasterPortsOnly, tcpPortsAllIt.next(), httpPortsIt.next())
-                            .put(nodeSettingsSupplier == null ? Settings.Builder.EMPTY_SETTINGS : nodeSettingsSupplier.get(nodeNum)).build(), setting.getPlugins());
+            final Settings.Builder nodeSettingsBuilder = getMinimumNonSecurityNodeSettingsBuilder(nodeNum, setting.clusterManagerNode, setting.dataNode, internalNodeSettings.size(), tcpClusterManagerPortsOnly, tcpPortsAllIt.next(), httpPortsIt.next());
+            final Settings settingsForNode;
+            if (nodeSettingsSupplier != null) {
+                final Settings suppliedSettings = nodeSettingsSupplier.get(nodeNum);
+                settingsForNode = AbstractSecurityUnitTest.mergeNodeRolesAndSettings(nodeSettingsBuilder, suppliedSettings).build();
+            } else {
+                settingsForNode = nodeSettingsBuilder.build();
+            }
+            PluginAwareNode node = new PluginAwareNode(setting.clusterManagerNode, settingsForNode, setting.getPlugins());
             System.out.println(node.settings());
 
             new Thread(new Runnable() {
@@ -219,7 +254,7 @@ public final class ClusterHelper {
         ClusterInfo cInfo = waitForCluster(ClusterHealthStatus.GREEN, TimeValue.timeValueSeconds(timeout), nodes == null?opensearchNodes.size():nodes.intValue());
         cInfo.numNodes = internalNodeSettings.size();
         cInfo.clustername = clustername;
-        cInfo.tcpMasterPortsOnly = tcpMasterPortsOnly.stream().map(s->"127.0.0.1:"+s).collect(Collectors.toList());
+        cInfo.tcpClusterManagerPortsOnly = tcpClusterManagerPortsOnly.stream().map(s->"127.0.0.1:"+s).collect(Collectors.toList());
 
         final String defaultTemplate = "{\n" +
                 "          \"index_patterns\": [\"*\"],\n" +
@@ -246,11 +281,11 @@ public final class ClusterHelper {
     }
 
     private void closeAllNodes() throws  Exception {
-        //close non master nodes
-        opensearchNodes.stream().filter(n->!n.isMasterEligible()).forEach(node->closeNode(node));
+        //close non cluster manager nodes
+        opensearchNodes.stream().filter(n->!n.isClusterManagerEligible()).forEach(ClusterHelper::closeNode);
 
-        //close master nodes
-        opensearchNodes.stream().filter(n->n.isMasterEligible()).forEach(node->closeNode(node));
+        //close cluster manager nodes
+        opensearchNodes.stream().filter(n->n.isClusterManagerEligible()).forEach(ClusterHelper::closeNode);
         opensearchNodes.clear();
         clusterState = ClusterState.STOPPED;
     }
@@ -258,7 +293,7 @@ public final class ClusterHelper {
     private static void closeNode(Node node) {
         try {
             node.close();
-            Thread.sleep(250);
+            node.awaitClose(250, TimeUnit.MILLISECONDS);
         } catch (Throwable e) {
             //ignore
         }
@@ -281,7 +316,7 @@ public final class ClusterHelper {
         try {
             log.debug("waiting for cluster state {} and {} nodes", status.name(), expectedNodeCount);
             final ClusterHealthResponse healthResponse = client.admin().cluster().prepareHealth()
-                    .setWaitForStatus(status).setTimeout(timeout).setMasterNodeTimeout(timeout).setWaitForNodes("" + expectedNodeCount).execute()
+                    .setWaitForStatus(status).setTimeout(timeout).setClusterManagerNodeTimeout(timeout).setWaitForNodes("" + expectedNodeCount).execute()
                     .actionGet();
             if (healthResponse.isTimedOut()) {
                 throw new IOException("cluster state is " + healthResponse.getStatus().name() + " with "
@@ -296,14 +331,14 @@ public final class ClusterHelper {
 
             final List<NodeInfo> nodes = res.getNodes();
 
-            final List<NodeInfo> masterNodes = nodes.stream().filter(n->n.getNode().getRoles().contains(DiscoveryNodeRole.MASTER_ROLE)).collect(Collectors.toList());
-            final List<NodeInfo> dataNodes = nodes.stream().filter(n->n.getNode().getRoles().contains(DiscoveryNodeRole.DATA_ROLE) && !n.getNode().getRoles().contains(DiscoveryNodeRole.MASTER_ROLE)).collect(Collectors.toList());
+            final List<NodeInfo> clusterManagerNodes = nodes.stream().filter(n->n.getNode().getRoles().contains(DiscoveryNodeRole.CLUSTER_MANAGER_ROLE)).collect(Collectors.toList());
+            final List<NodeInfo> dataNodes = nodes.stream().filter(n->n.getNode().getRoles().contains(DiscoveryNodeRole.DATA_ROLE) && !n.getNode().getRoles().contains(DiscoveryNodeRole.CLUSTER_MANAGER_ROLE)).collect(Collectors.toList());
             // Sorting the nodes so that the node receiving the http requests is always deterministic
             dataNodes.sort(Comparator.comparing(nodeInfo -> nodeInfo.getNode().getName()));
-            final List<NodeInfo> clientNodes = nodes.stream().filter(n->!n.getNode().getRoles().contains(DiscoveryNodeRole.MASTER_ROLE) && !n.getNode().getRoles().contains(DiscoveryNodeRole.DATA_ROLE)).collect(Collectors.toList());
+            final List<NodeInfo> clientNodes = nodes.stream().filter(n->!n.getNode().getRoles().contains(DiscoveryNodeRole.CLUSTER_MANAGER_ROLE) && !n.getNode().getRoles().contains(DiscoveryNodeRole.DATA_ROLE)).collect(Collectors.toList());
 
 
-            for (NodeInfo nodeInfo: masterNodes) {
+            for (NodeInfo nodeInfo: clusterManagerNodes) {
                 final TransportInfo transportInfo = nodeInfo.getInfo(TransportInfo.class);
                 final TransportAddress transportAddress = transportInfo.getAddress().publishAddress();
                 clusterInfo.nodePort = transportAddress.getPort();
@@ -354,39 +389,23 @@ public final class ClusterHelper {
     }
 
     // @formatter:off
-    private Settings.Builder getMinimumNonSecurityNodeSettingsBuilder(final int nodenum, final boolean masterNode,
-                                                                final boolean dataNode, int nodeCount, SortedSet<Integer> masterTcpPorts, /*SortedSet<Integer> nonMasterTcpPorts,*/ int tcpPort, int httpPort) {
+    private Settings.Builder getMinimumNonSecurityNodeSettingsBuilder(final int nodenum, final boolean isClusterManagerNode,
+                                                                final boolean isDataNode, int nodeCount, SortedSet<Integer> clusterManagerTcpPorts, int tcpPort, int httpPort) {
 
-        return Settings.builder()
+        return AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), isClusterManagerNode, isDataNode)
                 .put("node.name", "node_"+clustername+ "_num" + nodenum)
-                .put("node.data", dataNode)
-                .put("node.master", masterNode)
                 .put("cluster.name", clustername)
                 .put("path.data", "./target/data/"+clustername+"/data")
                 .put("path.logs", "./target/data/"+clustername+"/logs")
                 .put("node.max_local_storage_nodes", nodeCount)
-                //.put("discovery.zen.minimum_master_nodes", minMasterNodes(masterTcpPorts.size()))
-                .putList("cluster.initial_master_nodes", masterTcpPorts.stream().map(s->"127.0.0.1:"+s).collect(Collectors.toList()))
-                //.put("discovery.zen.no_master_block", "all")
-                //.put("discovery.zen.fd.ping_timeout", "5s")
+                .putList("cluster.initial_cluster_manager_nodes", clusterManagerTcpPorts.stream().map(s->"127.0.0.1:"+s).collect(Collectors.toList()))
                 .put("discovery.initial_state_timeout","8s")
-                .putList("discovery.seed_hosts", masterTcpPorts.stream().map(s->"127.0.0.1:"+s).collect(Collectors.toList()))
+                .putList("discovery.seed_hosts", clusterManagerTcpPorts.stream().map(s->"127.0.0.1:"+s).collect(Collectors.toList()))
                 .put("transport.tcp.port", tcpPort)
                 .put("http.port", httpPort)
-                //.put("http.enabled", true)
                 .put("http.cors.enabled", true)
                 .put("path.home", "./target");
     }
-    // @formatter:on
-
-	/*private int minMasterNodes(int masterEligibleNodes) {
-	    if(masterEligibleNodes <= 0) {
-	        throw new IllegalArgumentException("no master eligible nodes");
-	    }
-
-	    return (masterEligibleNodes/2) + 1;
-
-	}*/
 
     private enum ClusterState{
         UNINITIALIZED,

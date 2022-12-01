@@ -234,6 +234,19 @@ opendistro_security_date_math:
 opendistro_security_fls_exists:
   users:
     - fls_exists
+<<<<<<< HEAD
+=======
+opendistro_security_mapped:
+  reserved: false
+  hidden: false
+  backend_roles:
+    - prolemapped
+  hosts: []
+  users: []
+  and_backend_roles: []
+  description: "Security role mapping to backend role prolemapped"
+
+>>>>>>> origin/main
 logs_index_with_dls:
   users:
     - dept_manager

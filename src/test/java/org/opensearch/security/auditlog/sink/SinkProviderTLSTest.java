@@ -1,41 +1,40 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.auditlog.sink;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.ServerSocket;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
-import org.apache.http.impl.bootstrap.HttpServer;
-import org.apache.http.impl.bootstrap.ServerBootstrap;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.settings.Settings.Builder;
+import org.apache.hc.core5.http.impl.HttpProcessors;
+import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
+import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.settings.Settings.Builder;
 import org.opensearch.security.auditlog.helper.MockAuditMessageFactory;
 import org.opensearch.security.auditlog.helper.TestHttpHandler;
-import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.auditlog.impl.AuditCategory;
+import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.test.helper.file.FileHelper;
 
 public class SinkProviderTLSTest {
@@ -59,7 +58,8 @@ public class SinkProviderTLSTest {
 
 		TestHttpHandler handler = new TestHttpHandler();
 
-		server = ServerBootstrap.bootstrap().setListenerPort(8083).setServerInfo("Test/1.1").setSslContext(createSSLContext()).registerHandler("*", handler).create();
+		int port = findFreePort();
+		server = ServerBootstrap.bootstrap().setListenerPort(port).setHttpProcessor(HttpProcessors.server("Test/1.1")).setSslContext(createSSLContext()).register("*", handler).create();
 
 		server.start();
 
@@ -70,6 +70,11 @@ public class SinkProviderTLSTest {
 		builder.put("plugins.security.audit.config.webhook.ssl.pemtrustedcas_filepath", FileHelper.getAbsoluteFilePathFromClassPath("auditlog/root-ca.pem"));
 		builder.put("plugins.security.audit.endpoints.endpoint1.config.webhook.ssl.pemtrustedcas_filepath", FileHelper.getAbsoluteFilePathFromClassPath("auditlog/root-ca.pem"));
 		builder.put("plugins.security.audit.endpoints.endpoint2.config.webhook.ssl.pemtrustedcas_content", FileHelper.loadFile("auditlog/root-ca.pem"));
+
+		builder.put("plugins.security.audit.config.webhook.url", "https://localhost:" + port);
+		builder.put("plugins.security.audit.endpoints.endpoint1.config.webhook.url", "https://localhost:" + port);
+		builder.put("plugins.security.audit.endpoints.endpoint2.config.webhook.url", "https://localhost:" + port);
+
 
 		SinkProvider provider = new SinkProvider(builder.build(), null, null, null);
 		WebhookSink defaultSink = (WebhookSink) provider.defaultSink;
@@ -140,5 +145,13 @@ public class SinkProviderTLSTest {
 		Assert.assertTrue(in, in.contains("John Doe"));
 		Assert.assertTrue(in, in.contains("8.8.8.8"));
 		//Assert.assertTrue(in, in.contains("CN=kirk,OU=client,O=client,L=test,C=DE"));
+	}
+
+	private int findFreePort() {
+		try (ServerSocket serverSocket = new ServerSocket(0)) {
+			return serverSocket.getLocalPort();
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to find free port", e);
+		}
 	}
 }

@@ -1,20 +1,32 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
+
 package org.opensearch.security.auth;
 
-import org.opensearch.security.auditlog.AuditLog;
-import org.opensearch.security.http.XFFResolver;
-import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.user.User;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.tasks.Task;
-import org.opensearch.threadpool.ThreadPool;
-import org.opensearch.transport.TransportRequest;
+import java.util.Arrays;
+import java.util.HashSet;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.security.auditlog.AuditLog;
+import org.opensearch.security.http.XFFResolver;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.user.User;
+import org.opensearch.tasks.Task;
+import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.TransportRequest;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;

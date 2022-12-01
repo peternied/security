@@ -1,16 +1,12 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package com.amazon.dlic.auth.ldap2;
@@ -18,11 +14,10 @@ package com.amazon.dlic.auth.ldap2;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.opensearch.OpenSearchSecurityException;
-import org.opensearch.common.settings.Settings;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -32,17 +27,19 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.ldaptive.Connection;
-import org.ldaptive.LdapEntry;
 import org.ldaptive.LdapAttribute;
-
+import org.ldaptive.LdapEntry;
+import org.ldaptive.ReturnAttributes;
 
 import com.amazon.dlic.auth.ldap.LdapUser;
+import com.amazon.dlic.auth.ldap.backend.LDAPAuthenticationBackend;
+import com.amazon.dlic.auth.ldap.backend.LDAPAuthorizationBackend;
 import com.amazon.dlic.auth.ldap.srv.EmbeddedLDAPServer;
 import com.amazon.dlic.auth.ldap.util.ConfigConstants;
 import com.amazon.dlic.auth.ldap.util.LdapHelper;
-import com.amazon.dlic.auth.ldap.backend.LDAPAuthenticationBackend;
-import com.amazon.dlic.auth.ldap.backend.LDAPAuthorizationBackend;
 
+import org.opensearch.OpenSearchSecurityException;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.test.helper.file.FileHelper;
@@ -370,6 +367,31 @@ public class LdapBackendTestNewStyleConfig2 {
     }
 
     @Test
+    public void testLdapAuthorizationReturnAttributes() throws Exception {
+
+        final Settings settings = createBaseSettings()
+                .putList(ConfigConstants.LDAP_HOSTS, "127.0.0.1:4", "localhost:" + ldapPort)
+                .put("users.u1.search", "(uid={0})").put("users.u1.base", "ou=people,o=TEST")
+                .put("roles.g1.base", "ou=groups,o=TEST").put(ConfigConstants.LDAP_AUTHZ_ROLENAME, "cn")
+                .put("roles.g1.search", "(uniqueMember={0})")
+                .putList(ConfigConstants.LDAP_RETURN_ATTRIBUTES, "mail", "cn", "uid")
+                .build();
+
+        final LdapUser user = (LdapUser) new LDAPAuthenticationBackend2(settings, null)
+                .authenticate(new AuthCredentials("jacksonm", "secret".getBytes(StandardCharsets.UTF_8)));
+
+        new LDAPAuthorizationBackend2(settings, null).fillRoles(user, null);
+
+        final String[] attributes = user.getUserEntry().getAttributeNames();
+
+        Assert.assertNotNull(user);
+        Assert.assertEquals(3, attributes.length);
+        Assert.assertTrue(Arrays.asList(attributes).contains("mail"));
+        Assert.assertTrue(Arrays.asList(attributes).contains("cn"));
+        Assert.assertTrue(Arrays.asList(attributes).contains("uid"));
+    }
+
+    @Test
     public void testLdapAuthenticationReferral() throws Exception {
 
         final Settings settings = createBaseSettings()
@@ -380,12 +402,32 @@ public class LdapBackendTestNewStyleConfig2 {
                 .getConnection();
         try {
             con.open();
-            final LdapEntry ref1 = LdapHelper.lookup(con, "cn=Ref1,ou=people,o=TEST");
+            final LdapEntry ref1 = LdapHelper.lookup(con, "cn=Ref1,ou=people,o=TEST", ReturnAttributes.ALL.value(), true);
             Assert.assertEquals("cn=refsolved,ou=people,o=TEST", ref1.getDn());
         } finally {
             con.close();
         }
 
+    }
+
+    @Test
+    public void testLdapDontFollowReferrals() throws Exception {
+
+
+        final Settings settings = Settings.builder()
+                .putList(ConfigConstants.LDAP_HOSTS, "localhost:" + ldapPort)
+                .put(ConfigConstants.LDAP_AUTHC_USERSEARCH, "(uid={0})")
+                .put(ConfigConstants.FOLLOW_REFERRALS, false).build();
+
+
+        final Connection con = LDAPAuthorizationBackend.getConnection(settings, null);
+        try {
+            //If following is off then should fail to return the result provided by following
+            final LdapEntry ref1 = LdapHelper.lookup(con, "cn=Ref1,ou=people,o=TEST", ReturnAttributes.ALL.value(), settings.getAsBoolean(ConfigConstants.FOLLOW_REFERRALS, ConfigConstants.FOLLOW_REFERRALS_DEFAULT));
+            Assert.assertNull(ref1);
+        } finally {
+            con.close();
+        }
     }
 
     @Test

@@ -1,42 +1,15 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.rest.api;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.opensearch.security.DefaultObjectMapper;
-import org.opensearch.security.auditlog.AuditTestUtils;
-import org.opensearch.security.auditlog.config.AuditConfig;
-import org.opensearch.security.compliance.ComplianceConfig;
-import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.security.test.helper.rest.RestHelper;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Streams;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
-import org.opensearch.common.settings.Settings;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -44,35 +17,49 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.opensearch.security.DefaultObjectMapper.writeValueAsString;
-import static org.opensearch.security.DefaultObjectMapper.readTree;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Streams;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import org.opensearch.common.settings.Settings;
+import org.opensearch.security.DefaultObjectMapper;
+import org.opensearch.security.auditlog.AuditTestUtils;
+import org.opensearch.security.auditlog.config.AuditConfig;
+import org.opensearch.security.compliance.ComplianceConfig;
+import org.opensearch.security.test.helper.file.FileHelper;
+import org.opensearch.security.test.helper.rest.RestHelper;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
+import static org.opensearch.security.DefaultObjectMapper.readTree;
+import static org.opensearch.security.DefaultObjectMapper.writeValueAsString;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
-@RunWith(Parameterized.class)
 public class AuditApiActionTest extends AbstractRestApiUnitTest {
-
-    private final String ENDPOINT;
-    private final String CONFIG_ENDPOINT;
-
     // admin cred with roles in test yml files
     final Header adminCredsHeader = encodeBasicHeader("sarek", "sarek");
     // non-admin
     final Header nonAdminCredsHeader = encodeBasicHeader("random", "random");
 
-    public AuditApiActionTest(String endpoint){
-        ENDPOINT = endpoint;
-        CONFIG_ENDPOINT = ENDPOINT + "/config";
+    private final String ENDPOINT; 
+    private final String CONFIG_ENDPOINT;
+    protected String getEndpointPrefix() {
+        return PLUGINS_PREFIX;
     }
 
-    @Parameterized.Parameters
-    public static Iterable<String> endpoints() {
-        return ImmutableList.of(
-                LEGACY_OPENDISTRO_PREFIX + "/api/audit",
-                PLUGINS_PREFIX + "/api/audit"
-        );
+    public AuditApiActionTest(){
+        ENDPOINT = getEndpointPrefix() + "/api/audit";
+        CONFIG_ENDPOINT = ENDPOINT + "/config";
     }
 
     @Rule

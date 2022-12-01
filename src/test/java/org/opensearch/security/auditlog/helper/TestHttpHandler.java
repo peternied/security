@@ -1,16 +1,12 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.auditlog.helper;
@@ -18,15 +14,13 @@ package org.opensearch.security.auditlog.helper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.RequestLine;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpRequestHandler;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.core5.http.ClassicHttpRequest;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.io.HttpRequestHandler;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.protocol.HttpContext;
 
 public class TestHttpHandler implements HttpRequestHandler {
 	public String method;
@@ -34,16 +28,12 @@ public class TestHttpHandler implements HttpRequestHandler {
 	public String body;
 
 	@Override
-	public void handle(HttpRequest request, HttpResponse response, HttpContext context) throws HttpException, IOException {
-		RequestLine requestLine = request.getRequestLine();
-		this.method = requestLine.getMethod();
-		this.uri = requestLine.getUri();
+	public void handle(ClassicHttpRequest request, ClassicHttpResponse response, HttpContext context) throws HttpException, IOException {
+		this.method = request.getMethod();
+		this.uri = request.getRequestUri();
 
-		HttpEntity entity = null;
-		if (request instanceof HttpEntityEnclosingRequest) {
-			entity = ((HttpEntityEnclosingRequest) request).getEntity();
-			body = EntityUtils.toString(entity, StandardCharsets.UTF_8);
-		}
+		HttpEntity entity = request.getEntity();
+		body = EntityUtils.toString(entity, StandardCharsets.UTF_8);
 	}
 
 	public void reset() {

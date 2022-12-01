@@ -1,34 +1,26 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.dlic.dlsfls;
 
-import org.apache.http.HttpStatus;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.support.WriteRequest.RefreshPolicy;
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentType;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
 
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.support.WriteRequest.RefreshPolicy;
+import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.test.AbstractSecurityUnitTest;
 import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.helper.cluster.ClusterConfiguration;
@@ -37,7 +29,6 @@ import org.opensearch.security.test.helper.cluster.ClusterInfo;
 import org.opensearch.security.test.helper.rest.RestHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
-@RunWith(Parameterized.class)
 public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
 
     private final ClusterHelper cl1 = new ClusterHelper("crl1_n"+num.incrementAndGet()+"_f"+System.getProperty("forkno")+"_t"+System.nanoTime());
@@ -45,14 +36,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
     private ClusterInfo cl1Info;
     private ClusterInfo cl2Info;
 
-    //default is true
-    @Parameter
-    public boolean ccsMinimizeRoundtrips;
-
-    @Parameters
-    public static Object[] parameters() {
-        return new Object[] { Boolean.FALSE, Boolean.TRUE };
-    }
+    protected boolean ccsMinimizeRoundtrips() { return false; };
 
     @Override
     protected String getResourceFolder() {
@@ -63,14 +47,14 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
 
         System.setProperty("security.display_lic_none","true");
 
-        cl2Info = cl2.startCluster(minimumSecuritySettings(Settings.EMPTY), ClusterConfiguration.DEFAULT);
-        initialize(cl2Info, Settings.EMPTY, new DynamicSecurityConfig().setSecurityRoles(remoteRoles));
+        cl2Info = cl2.startCluster(minimumSecuritySettings(Settings.builder().putList("node.roles", "remote_cluster_client").build()), ClusterConfiguration.DEFAULT);
+        initialize(cl2, cl2Info, new DynamicSecurityConfig().setSecurityRoles(remoteRoles));
         System.out.println("### cl2 complete ###");
 
         //cl1 is coordinating
         cl1Info = cl1.startCluster(minimumSecuritySettings(crossClusterNodeSettings(cl2Info)), ClusterConfiguration.DEFAULT);
         System.out.println("### cl1 start ###");
-        initialize(cl1Info, Settings.EMPTY, new DynamicSecurityConfig().setSecurityRoles("roles_983.yml"));
+        initialize(cl1, cl1Info, new DynamicSecurityConfig().setSecurityRoles("roles_983.yml"));
         System.out.println("### cl1 initialized ###");
     }
 
@@ -82,7 +66,8 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
 
     private Settings crossClusterNodeSettings(ClusterInfo remote) {
         Settings.Builder builder = Settings.builder()
-                .putList("cluster.remote.cross_cluster_two.seeds", remote.nodeHost+":"+remote.nodePort);
+                .putList("cluster.remote.cross_cluster_two.seeds", remote.nodeHost+":"+remote.nodePort)
+                .putList("node.roles", "remote_cluster_client");
         return builder.build();
     }
 
@@ -90,15 +75,15 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
     public void testCcs() throws Exception {
         setupCcs("roles_983.yml");
 
-        try (TransportClient tc = getInternalTransportClient(cl1Info, Settings.EMPTY)) {
-            tc.index(new IndexRequest("twitter").type("tweet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+        try (Client tc = cl1.nodeClient()) {
+            tc.index(new IndexRequest("twitter").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl1Info.clustername+"\"}", XContentType.JSON)).actionGet();
         }
 
-        try (TransportClient tc = getInternalTransportClient(cl2Info, Settings.EMPTY)) {
-            tc.index(new IndexRequest("twutter").type("tweet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+        try (Client tc = cl2.nodeClient()) {
+            tc.index(new IndexRequest("twutter").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\"}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\","+
                               "\"Designation\": \"CEO\","+
                               "\"FirstName\": \"__fn__"+cl2Info.clustername+"\","+
@@ -109,7 +94,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
                               "\"XXX\": \"xxx0\""
                             + "}", XContentType.JSON)).actionGet();
 
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\","+
                               "\"Designation\": \"someoneelse\","+
                               "\"FirstName\": \"__fn__"+cl2Info.clustername+"\","+
@@ -126,7 +111,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
 
         System.out.println("###################### query 1");
         //on coordinating cluster
-        ccs = new RestHelper(cl1Info, false, false, getResourceFolder()).executeGetRequest("cross_cluster_two:humanresources/_search?pretty&ccs_minimize_roundtrips="+ccsMinimizeRoundtrips, encodeBasicHeader("human_resources_trainee", "password"));
+        ccs = new RestHelper(cl1Info, false, false, getResourceFolder()).executeGetRequest("cross_cluster_two:humanresources/_search?pretty&ccs_minimize_roundtrips="+ccsMinimizeRoundtrips(), encodeBasicHeader("human_resources_trainee", "password"));
         System.out.println(ccs.getBody());
         Assert.assertEquals(HttpStatus.SC_OK, ccs.getStatusCode());
         Assert.assertFalse(ccs.getBody().contains("crl1"));
@@ -147,15 +132,15 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
     public void testCcsDifferentConfig() throws Exception {
         setupCcs("roles_ccs2.yml");
 
-        try (TransportClient tc = getInternalTransportClient(cl1Info, Settings.EMPTY)) {
-            tc.index(new IndexRequest("twitter").type("tweet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+        try (Client tc = cl1.nodeClient()) {
+            tc.index(new IndexRequest("twitter").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl1Info.clustername+"\"}", XContentType.JSON)).actionGet();
         }
 
-        try (TransportClient tc = getInternalTransportClient(cl2Info, Settings.EMPTY)) {
-            tc.index(new IndexRequest("twutter").type("tweet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+        try (Client tc = cl2.nodeClient()) {
+            tc.index(new IndexRequest("twutter").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\"}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\","+
                             "\"Designation\": \"CEO\","+
                             "\"FirstName\": \"__fn__"+cl2Info.clustername+"\","+
@@ -166,7 +151,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
                             "\"XXX\": \"xxx0\""
                             + "}", XContentType.JSON)).actionGet();
 
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\","+
                             "\"Designation\": \"someoneelse\","+
                             "\"FirstName\": \"__fn__"+cl2Info.clustername+"\","+
@@ -183,7 +168,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
 
         System.out.println("###################### query 1");
         //on coordinating cluster
-        ccs = new RestHelper(cl1Info, false, false, getResourceFolder()).executeGetRequest("cross_cluster_two:humanresources/_search?pretty&ccs_minimize_roundtrips="+ccsMinimizeRoundtrips, encodeBasicHeader("human_resources_trainee", "password"));
+        ccs = new RestHelper(cl1Info, false, false, getResourceFolder()).executeGetRequest("cross_cluster_two:humanresources/_search?pretty&ccs_minimize_roundtrips="+ccsMinimizeRoundtrips(), encodeBasicHeader("human_resources_trainee", "password"));
         System.out.println(ccs.getBody());
         Assert.assertEquals(HttpStatus.SC_OK, ccs.getStatusCode());
         Assert.assertFalse(ccs.getBody().contains("crl1"));
@@ -205,11 +190,11 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
     public void testCcsDifferentConfigBoth() throws Exception {
         setupCcs("roles_ccs2.yml");
 
-        try (TransportClient tc = getInternalTransportClient(cl1Info, Settings.EMPTY)) {
-            tc.index(new IndexRequest("twitter").type("tweet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+        try (Client tc = cl1.nodeClient()) {
+            tc.index(new IndexRequest("twitter").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl1Info.clustername+"\"}", XContentType.JSON)).actionGet();
 
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl1Info.clustername+"\","+
                             "\"Designation\": \"CEO\","+
                             "\"FirstName\": \"__fn__"+cl1Info.clustername+"\","+
@@ -220,7 +205,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
                             "\"XXX\": \"xxx0\""
                             + "}", XContentType.JSON)).actionGet();
 
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
                     .source("{\"cluster\": \""+cl1Info.clustername+"\","+
                             "\"Designation\": \"someoneelse\","+
                             "\"FirstName\": \"__fn__"+cl1Info.clustername+"\","+
@@ -232,10 +217,10 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
                             + "}", XContentType.JSON)).actionGet();
         }
 
-        try (TransportClient tc = getInternalTransportClient(cl2Info, Settings.EMPTY)) {
-            tc.index(new IndexRequest("twutter").type("tweet").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+        try (Client tc = cl2.nodeClient()) {
+            tc.index(new IndexRequest("twutter").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\"}", XContentType.JSON)).actionGet();
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("0")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\","+
                             "\"Designation\": \"CEO\","+
                             "\"FirstName\": \"__fn__"+cl2Info.clustername+"\","+
@@ -246,7 +231,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
                             "\"XXX\": \"xxx0\""
                             + "}", XContentType.JSON)).actionGet();
 
-            tc.index(new IndexRequest("humanresources").type("hr").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
+            tc.index(new IndexRequest("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).id("1")
                     .source("{\"cluster\": \""+cl2Info.clustername+"\","+
                             "\"Designation\": \"someoneelse\","+
                             "\"FirstName\": \"__fn__"+cl2Info.clustername+"\","+
@@ -263,7 +248,7 @@ public class DlsFlsCrossClusterSearchTest extends AbstractSecurityUnitTest {
 
         System.out.println("###################### query 1");
         //on coordinating cluster
-        ccs = new RestHelper(cl1Info, false, false, getResourceFolder()).executeGetRequest("cross_cluster_two:humanresources,humanresources/_search?pretty&ccs_minimize_roundtrips="+ccsMinimizeRoundtrips, encodeBasicHeader("human_resources_trainee", "password"));
+        ccs = new RestHelper(cl1Info, false, false, getResourceFolder()).executeGetRequest("cross_cluster_two:humanresources,humanresources/_search?pretty&ccs_minimize_roundtrips="+ccsMinimizeRoundtrips(), encodeBasicHeader("human_resources_trainee", "password"));
         System.out.println(ccs.getBody());
         Assert.assertEquals(HttpStatus.SC_OK, ccs.getStatusCode());
         Assert.assertTrue(ccs.getBody().contains("crl1"));

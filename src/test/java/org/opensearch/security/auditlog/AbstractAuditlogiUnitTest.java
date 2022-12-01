@@ -1,34 +1,33 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.auditlog;
 
+import java.util.Arrays;
 import java.util.Collection;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.hc.core5.http.Header;
+
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.auditlog.config.AuditConfig;
-import org.apache.http.Header;
-import org.opensearch.common.settings.Settings;
-
 import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.auditlog.routing.AuditMessageRouter;
 import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
-import com.fasterxml.jackson.databind.JsonNode;
+
+import static org.opensearch.security.auditlog.config.AuditConfig.DEPRECATED_KEYS;
 
 public abstract class AbstractAuditlogiUnitTest extends SingleClusterTest {
 
@@ -40,20 +39,25 @@ public abstract class AbstractAuditlogiUnitTest extends SingleClusterTest {
         return "auditlog";
     }
 
-    protected final void setup(Settings additionalSettings) throws Exception {
-        final Settings.Builder auditSettingsBuilder = Settings.builder();
-        final Settings.Builder additionalSettingsBuilder = Settings.builder().put(additionalSettings);
-        AuditConfig.DEPRECATED_KEYS.forEach(key -> {
-            if (additionalSettingsBuilder.get(key) != null) {
-                auditSettingsBuilder.put(key, additionalSettings.get(key));
-                additionalSettingsBuilder.remove(key);
+    protected final void setup(Settings settings) throws Exception {
+        final Settings.Builder auditConfigSettings = Settings.builder();
+        final Settings.Builder defaultNodeSettings = Settings.builder();
+        // Separate the cluster defaults from audit settings that will be applied after the cluster is up
+        settings.keySet().forEach(key -> {
+            final boolean moveToAuditConfig = Arrays.stream(AuditConfig.Filter.FilterEntries.values())
+                    .anyMatch(entry -> entry.getKeyWithNamespace().equalsIgnoreCase(key) || entry.getLegacyKeyWithNamespace().equalsIgnoreCase(key))
+                    || DEPRECATED_KEYS.stream().anyMatch(key::equalsIgnoreCase);
+            if (moveToAuditConfig) {
+                auditConfigSettings.put(key, settings.get(key));
+            } else {
+                defaultNodeSettings.put(key, settings.get(key));
             }
         });
 
-        final Settings nodeSettings = defaultNodeSettings(additionalSettingsBuilder.build());
+        final Settings nodeSettings = defaultNodeSettings(defaultNodeSettings.build());
         setup(Settings.EMPTY, new DynamicSecurityConfig(), nodeSettings, init);
         rh = restHelper();
-        updateAuditConfig(auditSettingsBuilder.build());
+        updateAuditConfig(auditConfigSettings.build());
     }
 
     protected Settings defaultNodeSettings(Settings additionalSettings) {

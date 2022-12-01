@@ -14,37 +14,38 @@
  */
 
 /*
- * Portions Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.test;
 
-import org.opensearch.client.transport.TransportClient;
-import org.opensearch.common.settings.Settings;
+import java.io.File;
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Assert;
 
+import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.test.helper.cluster.ClusterConfiguration;
 import org.opensearch.security.test.helper.cluster.ClusterHelper;
 import org.opensearch.security.test.helper.cluster.ClusterInfo;
 import org.opensearch.security.test.helper.rest.RestHelper;
 
-import java.util.List;
-
 public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
 
-    private static final int DEFAULT_MASTER_NODE_NUM = 3;
+    public static final String TEST_RESOURCE_RELATIVE_PATH = "../../resources/test/";
+    public static final String TEST_RESOURCE_ABSOLUTE_PATH = new File(TEST_RESOURCE_RELATIVE_PATH).getAbsolutePath() + "/";
+    public static final String PROJECT_ROOT_RELATIVE_PATH = "../../../";
+
+    private static final int DEFAULT_CLUSTER_MANAGER_NODE_NUM = 3;
     private static final int DEFAULT_FIRST_DATA_NODE_NUM = 2;
 
     protected ClusterHelper clusterHelper = new ClusterHelper("utest_n"+num.incrementAndGet()+"_f"+System.getProperty("forkno")+"_t"+System.nanoTime());
@@ -76,7 +77,7 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
     protected void restart(Settings initTransportClientSettings, DynamicSecurityConfig dynamicSecuritySettings, Settings nodeOverride, boolean initOpendistroSecurityIndex) throws Exception {
         clusterInfo = clusterHelper.startCluster(minimumSecuritySettings(ccs(nodeOverride)), ClusterConfiguration.DEFAULT);
         if(initOpendistroSecurityIndex && dynamicSecuritySettings != null) {
-            initialize(clusterInfo, initTransportClientSettings, dynamicSecuritySettings);
+            initialize(clusterHelper, clusterInfo, dynamicSecuritySettings);
         }
     }
 
@@ -98,7 +99,7 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
         Assert.assertNull("No cluster", clusterInfo);
         clusterInfo = clusterHelper.startCluster(minimumSecuritySettings(ccs(nodeOverride)), clusterConfiguration);
         if(initSecurityIndex && dynamicSecuritySettings != null) {
-            initialize(clusterInfo, initTransportClientSettings, dynamicSecuritySettings);
+            initialize(clusterHelper, clusterInfo, dynamicSecuritySettings);
         }
     }
 
@@ -107,7 +108,7 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
         Assert.assertNull("No cluster", clusterInfo);
         clusterInfo = clusterHelper.startCluster(minimumSecuritySettings(ccs(nodeOverride)), clusterConfiguration, timeout, nodes);
         if(initSecurityIndex) {
-            initialize(clusterInfo, initTransportClientSettings, dynamicSecuritySettings);
+            initialize(clusterHelper, clusterInfo, dynamicSecuritySettings);
         }
     }
 
@@ -116,10 +117,10 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
         clusterInfo = clusterHelper.startCluster(minimumSecuritySettingsSslOnly(nodeOverride), ClusterConfiguration.DEFAULT);
     }
 
-    protected void setupSslOnlyModeWithMasterNodeWithoutSSL(Settings nodeOverride) throws Exception {
+    protected void setupSslOnlyModeWithClusterManagerNodeWithoutSSL(Settings nodeOverride) throws Exception {
         Assert.assertNull("No cluster", clusterInfo);
         clusterInfo = clusterHelper.startCluster(minimumSecuritySettingsSslOnlyWithOneNodeNonSSL(nodeOverride,
-                DEFAULT_MASTER_NODE_NUM), ClusterConfiguration.DEFAULT_MASTER_WITHOUT_SECURITY_PLUGIN);
+                DEFAULT_CLUSTER_MANAGER_NODE_NUM), ClusterConfiguration.DEFAULT_CLUSTER_MANAGER_WITHOUT_SECURITY_PLUGIN);
     }
 
     protected void setupSslOnlyModeWithDataNodeWithoutSSL(Settings nodeOverride) throws Exception {
@@ -142,9 +143,10 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
         return new RestHelper(clusterInfo, false, false, getResourceFolder());
     }
 
-    protected TransportClient getInternalTransportClient() {
-        return getInternalTransportClient(clusterInfo, Settings.EMPTY);
+    protected Client getClient() {
+        return clusterHelper.nodeClient();
     }
+
 
     @After
     public void tearDown() {

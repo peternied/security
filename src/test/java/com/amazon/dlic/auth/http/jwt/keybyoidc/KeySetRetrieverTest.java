@@ -1,16 +1,12 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package com.amazon.dlic.auth.http.jwt.keybyoidc;
@@ -18,30 +14,33 @@ package com.amazon.dlic.auth.http.jwt.keybyoidc;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Socket;
 import java.security.KeyStore;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
 
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpCoreContext;
-import org.apache.http.ssl.PrivateKeyDetails;
-import org.apache.http.ssl.PrivateKeyStrategy;
-import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.ssl.SSLContexts;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSession;
+
+import com.google.common.hash.Hashing;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.hc.core5.http.protocol.HttpCoreContext;
+import org.apache.hc.core5.ssl.PrivateKeyDetails;
+import org.apache.hc.core5.ssl.PrivateKeyStrategy;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
+import org.apache.hc.core5.ssl.SSLContexts;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.dlic.util.SettingsBasedSSLConfigurator;
+
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.network.SocketUtils;
-import com.google.common.hash.Hashing;
 
 public class KeySetRetrieverTest {
     protected static MockIpdServer mockIdpServer;
@@ -82,13 +81,13 @@ public class KeySetRetrieverTest {
         try (MockIpdServer sslMockIdpServer = new MockIpdServer(TestJwk.Jwks.ALL, SocketUtils.findAvailableTcpPort(),
                 true) {
             @Override
-            protected void handleDiscoverRequest(HttpRequest request, HttpResponse response, HttpContext context)
-                    throws HttpException, IOException {
+            protected void handleDiscoverRequest(HttpRequest request, ClassicHttpResponse response, HttpContext context)
+                    throws IOException, HttpException {
 
-                MockIpdServer.SSLTestHttpServerConnection connection = (MockIpdServer.SSLTestHttpServerConnection) ((HttpCoreContext) context)
-                        .getConnection();
 
-                X509Certificate peerCert = (X509Certificate) connection.getPeerCertificates()[0];
+                SSLSession sslSession = ((HttpCoreContext) context).getSSLSession();
+
+                X509Certificate peerCert = (X509Certificate) sslSession.getPeerCertificates()[0];
 
                 try {
                     String sha256Fingerprint = Hashing.sha256().hashBytes(peerCert.getEncoded()).toString();
@@ -121,7 +120,7 @@ public class KeySetRetrieverTest {
             sslContextBuilder.loadKeyMaterial(keyStore, "changeit".toCharArray(), new PrivateKeyStrategy() {
 
                 @Override
-                public String chooseAlias(Map<String, PrivateKeyDetails> aliases, Socket socket) {
+                public String chooseAlias(Map<String, PrivateKeyDetails> aliases, SSLParameters sslParameters) {
                     return "spock";
                 }
             });

@@ -1,27 +1,24 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.system_indices;
 
-import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.test.DynamicSecurityConfig;
-import org.opensearch.security.test.SingleClusterTest;
-import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.security.test.helper.rest.RestHelper;
-import org.apache.http.Header;
-import org.apache.http.HttpStatus;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
+import org.junit.Test;
+
 import org.opensearch.action.admin.cluster.repositories.put.PutRepositoryRequest;
 import org.opensearch.action.admin.cluster.snapshots.create.CreateSnapshotRequest;
 import org.opensearch.action.admin.indices.close.CloseIndexRequest;
@@ -29,18 +26,18 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.client.transport.TransportClient;
+import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.NamedXContentRegistry;
 import org.opensearch.common.xcontent.XContentParser;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.rest.RestStatus;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.test.DynamicSecurityConfig;
+import org.opensearch.security.test.SingleClusterTest;
+import org.opensearch.security.test.helper.file.FileHelper;
+import org.opensearch.security.test.helper.rest.RestHelper;
 
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -104,7 +101,7 @@ public class SystemIndicesTests extends SingleClusterTest {
      * @throws Exception
      */
     private void createTestIndicesAndDocs() {
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             for (String index : listOfIndexesToTest) {
                 tc.admin().indices().create(new CreateIndexRequest(index)).actionGet();
                 tc.index(new IndexRequest(index).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE).id("document1").source("{ \"foo\": \"bar\" }", XContentType.JSON)).actionGet();
@@ -113,7 +110,7 @@ public class SystemIndicesTests extends SingleClusterTest {
     }
 
     private void createSnapshots() {
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             for (String index : listOfIndexesToTest) {
                 tc.admin().cluster().putRepository(new PutRepositoryRequest(index).type("fs").settings(Settings.builder().put("location", repositoryPath.getRoot().getAbsolutePath() + "/" + index))).actionGet();
                 tc.admin().cluster().createSnapshot(new CreateSnapshotRequest(index, index + "_1").indices(index).includeGlobalState(true).waitForCompletion(true)).actionGet();
@@ -530,7 +527,7 @@ public class SystemIndicesTests extends SingleClusterTest {
         createTestIndicesAndDocs();
         createSnapshots();
 
-        try (TransportClient tc = getInternalTransportClient()) {
+        try (Client tc = getClient()) {
             for (String index : listOfIndexesToTest) {
                 tc.admin().indices().close(new CloseIndexRequest(index)).actionGet();
             }

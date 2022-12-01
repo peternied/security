@@ -1,39 +1,36 @@
 /*
- * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *  Licensed under the Apache License, Version 2.0 (the "License").
- *  You may not use this file except in compliance with the License.
- *  A copy of the License is located at
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  or in the "license" file accompanying this file. This file is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *  express or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
  */
 
 package org.opensearch.security.ssl;
 
+import java.util.List;
+import java.util.Map;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import net.minidev.json.JSONObject;
+import org.junit.Assert;
+import org.junit.Test;
+
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import net.minidev.json.JSONObject;
-import org.opensearch.common.settings.Settings;
-import org.junit.Assert;
-import org.junit.Test;
 
-import java.util.List;
-import java.util.Map;
+import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
+import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
 public class SecuritySSLCertsInfoActionTests extends SingleClusterTest {
-
-    private final String ENDPOINT = "_opendistro/_security/api/ssl/certs";
-
     private final List<Map<String, String>> NODE_CERT_DETAILS = ImmutableList.of(
         ImmutableMap.of(
             "issuer_dn", "CN=Example Com Inc. Signing CA,OU=Example Com Inc. Signing CA,O=Example Com Inc.,DC=example,DC=com",
@@ -44,7 +41,16 @@ public class SecuritySSLCertsInfoActionTests extends SingleClusterTest {
         ));
 
     @Test
+    public void testCertInfo_Legacy_Pass() throws Exception {
+        certInfo_Pass(LEGACY_OPENDISTRO_PREFIX +  "/api/ssl/certs");
+    } 
+
+    @Test
     public void testCertInfo_Pass() throws Exception {
+        certInfo_Pass(PLUGINS_PREFIX +  "/api/ssl/certs");
+    } 
+
+    public void certInfo_Pass(final String endpoint) throws Exception {
         initTestCluster();
         final RestHelper rh = restHelper();
         rh.enableHTTPClientSSL = true;
@@ -52,7 +58,7 @@ public class SecuritySSLCertsInfoActionTests extends SingleClusterTest {
         rh.sendAdminCertificate = true;
         rh.keystore = "kirk-keystore.jks";
 
-        final RestHelper.HttpResponse transportInfoRestResponse = rh.executeGetRequest(ENDPOINT);
+        final RestHelper.HttpResponse transportInfoRestResponse = rh.executeGetRequest(endpoint);
         JSONObject expectedJsonResponse = new JSONObject();
         expectedJsonResponse.appendField("http_certificates_list", NODE_CERT_DETAILS);
         expectedJsonResponse.appendField("transport_certificates_list", NODE_CERT_DETAILS);
@@ -60,7 +66,16 @@ public class SecuritySSLCertsInfoActionTests extends SingleClusterTest {
     }
 
     @Test
+    public void testCertInfoFail_Legacy_NonAdmin() throws Exception {
+        certInfoFail_NonAdmin(LEGACY_OPENDISTRO_PREFIX +  "/api/ssl/certs");
+    } 
+
+    @Test
     public void testCertInfoFail_NonAdmin() throws Exception {
+        certInfoFail_NonAdmin(PLUGINS_PREFIX +  "/api/ssl/certs");
+    } 
+
+    public void certInfoFail_NonAdmin(final String endpoint) throws Exception {
         initTestCluster();
         final RestHelper rh = restHelper();
         rh.enableHTTPClientSSL = true;
@@ -68,7 +83,7 @@ public class SecuritySSLCertsInfoActionTests extends SingleClusterTest {
         rh.sendAdminCertificate = true;
         rh.keystore = "spock-keystore.jks";
 
-        final RestHelper.HttpResponse transportInfoRestResponse = rh.executeGetRequest(ENDPOINT);
+        final RestHelper.HttpResponse transportInfoRestResponse = rh.executeGetRequest(endpoint);
         Assert.assertEquals(401, transportInfoRestResponse.getStatusCode()); // Forbidden for non-admin
         Assert.assertEquals("Unauthorized", transportInfoRestResponse.getStatusReason());
     }

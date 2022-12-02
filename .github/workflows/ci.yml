@@ -29,7 +29,7 @@ jobs:
       uses: actions/setup-java@v2
       with:
         distribution: oracle # Only distribution with 14
-        java-version: ${{ matrix.jdk }}
+        java-version: 14.0.2
 
     - name: Checkout security
       uses: actions/checkout@v2

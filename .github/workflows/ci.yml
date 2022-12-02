@@ -28,8 +28,8 @@ jobs:
       if: matrix.jdk == '17'
       uses: oracle-actions/setup-java@v1
       with:
-          website: jdk.java.net
-          release: ${{ matrix.jdk }}
+        website: jdk.java.net
+        release: 17
 
     - name: Checkout security
       uses: actions/checkout@v2

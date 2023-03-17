@@ -25,6 +25,7 @@ import org.opensearch.rest.RestHandler;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
+import org.opensearch.security.dlic.rest.api.config.StringApiAction;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.ssl.SecurityKeyStore;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
@@ -63,6 +64,8 @@ public class SecurityRestApiActions {
         handlers.add(new AllowlistApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool, auditLog));
         handlers.add(new AuditApiAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool, auditLog));
         handlers.add(new SecuritySSLCertsAction(settings, configPath, controller, client, adminDns, cr, cs, principalExtractor, evaluator, threadPool, auditLog, securityKeyStore, certificatesReloadEnabled));
+
+        handlers.add(new StringApiAction(adminDns, evaluator, threadPool));
         return Collections.unmodifiableCollection(handlers);
     }
 

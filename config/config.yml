@@ -67,7 +67,7 @@ config:
     #do_not_fail_on_forbidden: false
     #kibana:
     # Kibana multitenancy
-    #multitenancy_enabled: true
+    #dynamic.multitenancy_enabled: true
     #server_username: kibanaserver
     #index: '.kibana'
     http:

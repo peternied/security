@@ -66,6 +66,7 @@ import org.opensearch.SpecialPermission;
 import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionResponse;
+import org.opensearch.action.ActionType;
 import org.opensearch.action.search.PitService;
 import org.opensearch.action.search.SearchScrollAction;
 import org.opensearch.action.support.ActionFilter;
@@ -184,6 +185,7 @@ import org.opensearch.transport.TransportResponse;
 import org.opensearch.transport.TransportResponseHandler;
 import org.opensearch.transport.TransportService;
 import org.opensearch.watcher.ResourceWatcherService;
+import org.opensearch.security.dlic.rest.api.ConfigActions;
 
 public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin implements ClusterPlugin, MapperPlugin {
 
@@ -506,6 +508,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
             actions.add(new ActionHandler<>(ConfigUpdateAction.INSTANCE, TransportConfigUpdateAction.class));
             actions.add(new ActionHandler<>(WhoAmIAction.INSTANCE, TransportWhoAmIAction.class));
         }
+        final ConfigActions configActions = new ConfigActions();
+		for(Map.Entry<ActionType, Class> entry : configActions.getActions().entrySet()) {
+            actions.add(new ActionHandler<>(entry.getKey(), entry.getValue()));
+        }
+
         return actions;
     }
 

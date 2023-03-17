@@ -37,7 +37,7 @@ import org.opensearch.security.test.helper.rest.RestHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 public class HealthTests extends SingleClusterTest {
-    
+
     @Test
     public void testHealth() throws Exception {
         setup(Settings.EMPTY, new DynamicSecurityConfig(), Settings.EMPTY);

@@ -218,6 +218,8 @@ public class SecurityFilter implements ActionFilter {
 
             }
 
+            System.err.println("Inside the security filter, we know the user to be: " + (user != null ? user.getName() : "null user") + ", action is " + task.getAction());
+
 
             if(userIsAdmin
                     || confRequest

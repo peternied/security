@@ -35,6 +35,7 @@ jobs:
           -x checkstyleMain
           -x checkstyleTest
           -x spotbugsMain
+          --scan
 
     - name: Coverage
       uses: codecov/codecov-action@v1
@@ -82,6 +83,7 @@ jobs:
           -x checkstyleMain
           -x checkstyleTest
           -x spotbugsMain
+          --scan
 
   backward-compatibility:
 
@@ -117,7 +119,7 @@ jobs:
     - uses: github/codeql-action/init@v1
       with:
         languages: java
-    - run: ./gradlew clean build -Dbuild.snapshot=false -x test -x integrationTest
+    - run: ./gradlew clean build -Dbuild.snapshot=false -x test -x integrationTest --scan
     - uses: github/codeql-action/analyze@v1
 
   build-artifact-names:

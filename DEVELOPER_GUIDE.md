@@ -1,6 +1,6 @@
 # Developer Guide
 
-So you want to contribute code to OpenSearch Security? Excellent! We're glad you're here. Here's what you need to do.
+So you want to contribute code to OpenSearch Security??? Excellent! We're glad you're here. Here's what you need to do.
 
 - [Developer Guide](#developer-guide)
   - [Prerequisites](#prerequisites)

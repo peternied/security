@@ -61,16 +61,13 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
         this.dcm = dcm;
 
         Settings settings = dcm.getDynamicOnBehalfOfSettings();
-        if (settings != null) {
-            Boolean enabled = Boolean.parseBoolean(settings.get("enabled"));
-            String signingKey = settings.get("signing_key");
-            String encryptionKey = settings.get("encryption_key");
 
-            if (!Boolean.FALSE.equals(enabled) && signingKey != null && encryptionKey != null) {
-                this.vendor = new JwtVendor(settings, Optional.empty());
-            } else {
-                this.vendor = null;
-            }
+        Boolean enabled = Boolean.parseBoolean(settings.get("enabled"));
+        String signingKey = settings.get("signing_key");
+        String encryptionKey = settings.get("encryption_key");
+
+        if (!Boolean.FALSE.equals(enabled) && signingKey != null && encryptionKey != null) {
+            this.vendor = new JwtVendor(settings, Optional.empty());
         } else {
             this.vendor = null;
         }

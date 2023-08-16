@@ -152,7 +152,7 @@ public class JwtVendor {
 
         if (bwcModeEnabled && backendRoles != null) {
             String listOfBackendRoles = String.join(",", backendRoles);
-            jwtClaims.setProperty("dbr", listOfBackendRoles);
+            jwtClaims.setProperty("br", listOfBackendRoles);
         }
 
         String encodedJwt = jwtProducer.processJwt(jwt);

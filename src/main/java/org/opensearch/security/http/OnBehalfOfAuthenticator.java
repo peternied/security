@@ -104,11 +104,11 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
 
     private String[] extractBackendRolesFromClaims(Claims claims) {
         // Object backendRolesObject = ObjectUtils.firstNonNull(claims.get("ebr"), claims.get("dbr"));
-        if (!claims.containsKey("dbr")) {
+        if (!claims.containsKey("br")) {
             return null;
         }
 
-        Object backendRolesObject = claims.get("dbr");
+        Object backendRolesObject = claims.get("br");
         String[] backendRoles;
 
         if (backendRolesObject == null) {

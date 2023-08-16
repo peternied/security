@@ -211,8 +211,8 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             }
 
             final String issuer = claims.getIssuer();
-            final String clusterID = OpenSearchSecurityPlugin.getClusterName().getClusterName().value();
-            if (!issuer.equals(clusterID)) {
+            final String clusterName = OpenSearchSecurityPlugin.getClusterName().getClusterName().value();
+            if (!issuer.equals(clusterName)) {
                 log.error("This issuer of this OBO does not match the current cluster identifier");
                 return null;
             }

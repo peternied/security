@@ -237,11 +237,7 @@ public class OnBehalfOfAuthenticatorTest {
         final AuthCredentials credentials = extractCredentialsFromJwtHeader(
             signingKeyB64Encoded,
             claimsEncryptionKey,
-            Jwts.builder()
-                .setIssuer(clusterNameString)
-                .setSubject("Leonard McCoy")
-                .claim("dr", "role1,role2")
-                .setAudience("svc1"),
+            Jwts.builder().setIssuer(clusterNameString).setSubject("Leonard McCoy").claim("dr", "role1,role2").setAudience("svc1"),
             true
         );
 
@@ -257,11 +253,7 @@ public class OnBehalfOfAuthenticatorTest {
         final AuthCredentials credentials = extractCredentialsFromJwtHeader(
             signingKeyB64Encoded,
             claimsEncryptionKey,
-            Jwts.builder()
-                .setIssuer(clusterNameString)
-                .setSubject("Leonard McCoy")
-                .claim("dr", null)
-                .setAudience("svc1"),
+            Jwts.builder().setIssuer(clusterNameString).setSubject("Leonard McCoy").claim("dr", null).setAudience("svc1"),
             false
         );
 
@@ -276,11 +268,7 @@ public class OnBehalfOfAuthenticatorTest {
         final AuthCredentials credentials = extractCredentialsFromJwtHeader(
             signingKeyB64Encoded,
             claimsEncryptionKey,
-            Jwts.builder()
-                .setIssuer(clusterNameString)
-                .setSubject("Leonard McCoy")
-                .claim("dr", 123L)
-                .setAudience("svc1"),
+            Jwts.builder().setIssuer(clusterNameString).setSubject("Leonard McCoy").claim("dr", 123L).setAudience("svc1"),
             true
         );
 
@@ -312,11 +300,7 @@ public class OnBehalfOfAuthenticatorTest {
         final AuthCredentials credentials = extractCredentialsFromJwtHeader(
             signingKeyB64Encoded,
             claimsEncryptionKey,
-            Jwts.builder()
-                .setIssuer(clusterNameString)
-                .claim("roles", "role1,role2")
-                .claim("asub", "Dr. Who")
-                .setAudience("svc1"),
+            Jwts.builder().setIssuer(clusterNameString).claim("roles", "role1,role2").claim("asub", "Dr. Who").setAudience("svc1"),
             false
         );
 

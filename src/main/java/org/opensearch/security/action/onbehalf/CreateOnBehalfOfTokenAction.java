@@ -110,7 +110,10 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                 try {
                     if (vendor == null) {
                         channel.sendResponse(
-                            new BytesRestResponse(RestStatus.SERVICE_UNAVAILABLE, "on_behalf_of is either disabled or the configuration is invalid")
+                            new BytesRestResponse(
+                                RestStatus.SERVICE_UNAVAILABLE,
+                                "on_behalf_of is either disabled or the configuration is invalid"
+                            )
                         );
                         return;
                     }

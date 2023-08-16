@@ -181,12 +181,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
         }
 
         try {
-            Matcher matcher = PATTERN_PATH_PREFIX.matcher(request.path());
-            final String suffix = matcher.matches() ? matcher.group(2) : null;
-            if (request.method() == RestRequest.Method.POST && ON_BEHALF_OF_SUFFIX.equals(suffix)
-                || request.method() == RestRequest.Method.PUT && ACCOUNT_SUFFIX.equals(suffix)) {
-                final OpenSearchException exception = ExceptionUtils.invalidUsageOfOBOTokenException();
-                log.error(exception.toString());
+            if (!isAllowedRequest(request)) {
                 return null;
             }
 
@@ -232,6 +227,18 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             }
             return null;
         }
+    }
+
+    public Boolean isAllowedRequest(final RestRequest request) {
+        Matcher matcher = PATTERN_PATH_PREFIX.matcher(request.path());
+        final String suffix = matcher.matches() ? matcher.group(2) : null;
+        if (request.method() == RestRequest.Method.POST && ON_BEHALF_OF_SUFFIX.equals(suffix)
+            || request.method() == RestRequest.Method.PUT && ACCOUNT_SUFFIX.equals(suffix)) {
+            final OpenSearchException exception = ExceptionUtils.invalidUsageOfOBOTokenException();
+            log.error(exception.toString());
+            return false;
+        }
+        return true;
     }
 
     @Override

@@ -103,7 +103,7 @@ public class OnBehalfOfJwtAuthenticationTest {
         Header adminOboAuthHeader = new BasicHeader("Authorization", "Bearer " + oboToken);
 
         try (TestRestClient client = cluster.getRestClient(adminOboAuthHeader)) {
-            TestRestClient.HttpResponse response = client.getOBOTokenFromOboEndpoint(OBO_REASON, adminOboAuthHeader);
+            TestRestClient.HttpResponse response = client.getOnBehalfOfToken(OBO_REASON, adminOboAuthHeader);
             response.assertStatusCode(401);
         }
     }

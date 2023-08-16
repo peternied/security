@@ -29,7 +29,7 @@ import java.util.Objects;
 
 public class keyUtil {
 
-    public static JwtParser keyAlgorithmCheck(final String signingKey, final Logger log) {
+    public static JwtParser createJwtParserFromSigningKey(final String signingKey, final Logger log) {
         final SecurityManager sm = System.getSecurityManager();
 
         JwtParser jwtParser = null;

@@ -72,7 +72,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
     }
 
     private JwtParser initParser(final String signingKey) {
-        JwtParser _jwtParser = keyUtil.keyAlgorithmCheck(signingKey, log);
+        JwtParser _jwtParser = keyUtil.createJwtParserFromSigningKey(signingKey, log);
 
         if (_jwtParser == null) {
             throw new RuntimeException("Unable to find on behalf of authenticator signing key");
@@ -211,7 +211,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             }
 
             final String issuer = claims.getIssuer();
-            final String clusterID = OpenSearchSecurityPlugin.getClusterNameString().getClusterName().value();
+            final String clusterID = OpenSearchSecurityPlugin.getClusterName().getClusterName().value();
             if (!issuer.equals(clusterID)) {
                 log.error("This issuer of this OBO does not match the current cluster identifier");
                 return null;

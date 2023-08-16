@@ -57,7 +57,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         super();
 
         String signingKey = settings.get("signing_key");
-        JwtParser _jwtParser = keyUtil.keyAlgorithmCheck(signingKey, log);
+        JwtParser _jwtParser = keyUtil.createJwtParserFromSigningKey(signingKey, log);
 
         jwtUrlParameter = settings.get("jwt_url_parameter");
         jwtHeaderName = settings.get("jwt_header", HttpHeaders.AUTHORIZATION);

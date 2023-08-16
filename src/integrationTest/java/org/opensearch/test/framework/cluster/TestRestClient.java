@@ -135,7 +135,7 @@ public class TestRestClient implements AutoCloseable {
         return executeRequest(new HttpGet(getHttpServerUri() + "/_opendistro/_security/authinfo?pretty"), headers);
     }
 
-    public HttpResponse getOBOTokenFromOboEndpoint(String jsonData, Header... headers) {
+    public HttpResponse getOnBehalfOfToken(String jsonData, Header... headers) {
         try {
             HttpPost httpPost = new HttpPost(new URIBuilder(getHttpServerUri() + "/_plugins/_security/api/user/onbehalfof?pretty").build());
             httpPost.setEntity(toStringEntity(jsonData));

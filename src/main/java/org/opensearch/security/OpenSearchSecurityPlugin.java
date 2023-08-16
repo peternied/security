@@ -1990,7 +1990,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         cs = clusterService;
     }
 
-    public static ClusterService getClusterNameString() {
+    public static ClusterService getClusterName() {
         return cs;
     }
 }

@@ -204,12 +204,6 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
                 return null;
             }
 
-//            final String tokenType = claims.get(TOKEN_TYPE_CLAIM).toString();
-//            if (!tokenType.equals(TOKEN_TYPE)) {
-//                log.error("This toke is not verifying as an on-behalf-of token");
-//                return null;
-//            }
-
             final String issuer = claims.getIssuer();
             final String clusterName = OpenSearchSecurityPlugin.getClusterName().getClusterName().value();
             if (!issuer.equals(clusterName)) {

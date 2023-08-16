@@ -118,7 +118,7 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                     final String clusterIdentifier = clusterService.getClusterName().value();
 
                     final Map<String, Object> requestBody = request.contentOrSourceParamParser().map();
-                    final String reason = (String) requestBody.getOrDefault("reason", null);
+                    final String description = (String) requestBody.getOrDefault("description", null);
 
                     final Integer tokenDuration = Optional.ofNullable(requestBody.get("duration"))
                         .map(value -> (String) value)

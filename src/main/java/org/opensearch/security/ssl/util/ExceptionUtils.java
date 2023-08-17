@@ -65,7 +65,7 @@ public class ExceptionUtils {
     }
 
     public static OpenSearchException invalidUsageOfOBOTokenException() {
-        return new OpenSearchException("On-Behalf-Of Token is not allowed to be used for accessing this endopoint.");
+        return new OpenSearchException("On-Behalf-Of Token is not allowed to be used for accessing this endpoint.");
     }
 
     public static OpenSearchException createTransportClientNoLongerSupportedException() {

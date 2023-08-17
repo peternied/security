@@ -221,7 +221,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile ThreadPool threadPool;
     private volatile ConfigurationRepository cr;
     private volatile AdminDNs adminDns;
-    private static volatile ClusterService cs;
+    private volatile ClusterService cs;
     private volatile AtomicReference<DiscoveryNode> localNode = new AtomicReference<>();
     private volatile AuditLog auditLog;
     private volatile BackendRegistry backendRegistry;
@@ -1049,7 +1049,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             configPath,
             compatConfig
         );
-        dcf = new DynamicConfigFactory(cr, settings, configPath, localClient, threadPool, cih);
+        dcf = new DynamicConfigFactory(cr, settings, configPath, localClient, threadPool, cih, this.cs.getClusterName().value());
         dcf.registerDCFListener(backendRegistry);
         dcf.registerDCFListener(compatConfig);
         dcf.registerDCFListener(irr);
@@ -1984,13 +1984,5 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         @Override
         public void stop() {}
 
-    }
-
-    public static void setClusterService(ClusterService clusterService) {
-        cs = clusterService;
-    }
-
-    public static ClusterService getClusterName() {
-        return cs;
     }
 }

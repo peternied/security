@@ -36,7 +36,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.security.OpenSearchSecurityPlugin;
 import org.opensearch.security.auth.HTTPAuthenticator;
 import org.opensearch.security.authtoken.jwt.EncryptionDecryptionUtil;
 import org.opensearch.security.ssl.util.ExceptionUtils;
@@ -63,12 +62,14 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
     private final JwtParser jwtParser;
     private final String encryptionKey;
     private final Boolean oboEnabled;
+    private final String clusterName;
 
-    public OnBehalfOfAuthenticator(Settings settings) {
+    public OnBehalfOfAuthenticator(Settings settings, String clusterName) {
         String oboEnabledSetting = settings.get("enabled");
         oboEnabled = oboEnabledSetting == null ? Boolean.TRUE : Boolean.valueOf(oboEnabledSetting);
         encryptionKey = settings.get("encryption_key");
         jwtParser = initParser(settings.get("signing_key"));
+        this.clusterName = clusterName;
     }
 
     private JwtParser initParser(final String signingKey) {
@@ -200,7 +201,6 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             }
 
             final String issuer = claims.getIssuer();
-            final String clusterName = OpenSearchSecurityPlugin.getClusterName().getClusterName().value();
             if (!issuer.equals(clusterName)) {
                 log.error("This issuer of this OBO does not match the current cluster identifier");
                 return null;

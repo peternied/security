@@ -21,7 +21,6 @@ import org.apache.cxf.rs.security.jose.jws.JwsJwtCompactConsumer;
 import org.apache.cxf.rs.security.jose.jwt.JwtToken;
 import org.junit.Assert;
 import org.junit.Test;
-
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.support.ConfigConstants;
 
@@ -37,10 +36,20 @@ public class JwtVendorTest {
         Assert.assertEquals("abc123", jwk.getProperty("k"));
     }
 
-    @Test(expected = Exception.class)
-    public void testCreateJwkFromSettingsWithoutSigningKey() throws Exception {
+    @Test
+    public void testCreateJwkFromSettingsWithoutSigningKey() {
         Settings settings = Settings.builder().put("jwt", "").build();
-        JwtVendor.createJwkFromSettings(settings);
+        assertThrows(
+            RuntimeException.class,
+            "java.lang.Exception: Settings for key is missing. Please specify at least the option signing_key with a shared secret.",
+            () -> {
+                try {
+                    JwtVendor.createJwkFromSettings(settings);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        );
     }
 
     @Test
@@ -115,23 +124,28 @@ public class JwtVendorTest {
         Assert.assertEquals(expectedBackendRoles, jwt.getClaim("dbr"));
     }
 
-    @Test(expected = Exception.class)
-    public void testCreateJwtWithBadExpiry() throws Exception {
+    @Test
+    public void testCreateJwtWithBadExpiry() {
         String issuer = "cluster_0";
         String subject = "admin";
         String audience = "audience_0";
         List<String> roles = List.of("admin");
         Integer expirySeconds = -300;
         String claimsEncryptionKey = RandomStringUtils.randomAlphanumeric(16);
-
         Settings settings = Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
+        assertThrows(RuntimeException.class, "java.lang.Exception: The expiration time should be a positive integer", () -> {
+            try {
+                jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
-    @Test(expected = Exception.class)
-    public void testCreateJwtWithBadEncryptionKey() throws Exception {
+    @Test
+    public void testCreateJwtWithBadEncryptionKey() {
         String issuer = "cluster_0";
         String subject = "admin";
         String audience = "audience_0";
@@ -139,25 +153,62 @@ public class JwtVendorTest {
         Integer expirySeconds = 300;
 
         Settings settings = Settings.builder().put("signing_key", "abc123").build();
-        JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
+        assertThrows(RuntimeException.class, "java.lang.RuntimeException: encryption_key cannot be null", () -> {
+            try {
+                new JwtVendor(settings, Optional.empty()).createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
-    @Test(expected = Exception.class)
-    public void testCreateJwtWithBadRoles() throws Exception {
+    @Test
+    public void testCreateJwtWithBadRoles() {
         String issuer = "cluster_0";
         String subject = "admin";
         String audience = "audience_0";
         List<String> roles = null;
         Integer expirySecond = 300;
         String claimsEncryptionKey = RandomStringUtils.randomAlphanumeric(16);
-
         Settings settings = Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
-
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        jwtVendor.createJwt(issuer, subject, audience, expirySecond, roles, List.of());
+        assertThrows(RuntimeException.class, "java.lang.Exception: Roles cannot be null", () -> {
+            try {
+                jwtVendor.createJwt(issuer, subject, audience, expirySecond, roles, List.of());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
+    public static <T extends Throwable> T assertThrows(Class<T> expectedType, String expectedMessage, Runnable executable) {
+        try {
+            executable.run();
+        } catch (Throwable actualException) {
+            if (expectedType.isInstance(actualException)) {
+                if (actualException.getMessage().equals(expectedMessage)) {
+                    return expectedType.cast(actualException);
+                } else {
+                    String message = String.format(
+                        "Expected %s with message '%s', but got message '%s' instead",
+                        expectedType.getSimpleName(),
+                        expectedMessage,
+                        actualException.getMessage()
+                    );
+                    throw new AssertionError(message, actualException);
+                }
+            } else {
+                String message = String.format(
+                    "Expected %s to be thrown, but %s was thrown instead",
+                    expectedType.getSimpleName(),
+                    actualException.getClass().getSimpleName()
+                );
+                throw new AssertionError(message, actualException);
+            }
+        }
+        String message = String.format("Expected %s to be thrown, but nothing was thrown", expectedType.getSimpleName());
+        throw new AssertionError(message);
+    }
 }

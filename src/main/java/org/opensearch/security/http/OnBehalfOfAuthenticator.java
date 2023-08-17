@@ -40,7 +40,7 @@ import org.opensearch.security.auth.HTTPAuthenticator;
 import org.opensearch.security.authtoken.jwt.EncryptionDecryptionUtil;
 import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.user.AuthCredentials;
-import org.opensearch.security.util.keyUtil;
+import org.opensearch.security.util.keyUtils;
 
 import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
@@ -73,7 +73,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
     }
 
     private JwtParser initParser(final String signingKey) {
-        JwtParser _jwtParser = keyUtil.createJwtParserFromSigningKey(signingKey, log);
+        JwtParser _jwtParser = keyUtils.createJwtParserFromSigningKey(signingKey, log);
 
         if (_jwtParser == null) {
             throw new RuntimeException("Unable to find on behalf of authenticator signing key");

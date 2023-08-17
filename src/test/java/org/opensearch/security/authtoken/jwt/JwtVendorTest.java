@@ -39,16 +39,16 @@ public class JwtVendorTest {
     @Test
     public void testCreateJwkFromSettingsWithoutSigningKey() {
         Settings settings = Settings.builder().put("jwt", "").build();
-        assertThrows(
-            RuntimeException.class,
-            "java.lang.Exception: Settings for key is missing. Please specify at least the option signing_key with a shared secret.",
-            () -> {
-                try {
-                    JwtVendor.createJwkFromSettings(settings);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+        Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
+            try {
+                JwtVendor.createJwkFromSettings(settings);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
+        });
+        Assert.assertEquals(
+            "java.lang.Exception: Settings for key is missing. Please specify at least the option signing_key with a shared secret.",
+            exception.getMessage()
         );
     }
 
@@ -135,13 +135,14 @@ public class JwtVendorTest {
         Settings settings = Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        assertThrows(RuntimeException.class, "java.lang.Exception: The expiration time should be a positive integer", () -> {
+        Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
             try {
                 jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
+        Assert.assertEquals("java.lang.Exception: The expiration time should be a positive integer", exception.getMessage());
     }
 
     @Test
@@ -154,13 +155,14 @@ public class JwtVendorTest {
 
         Settings settings = Settings.builder().put("signing_key", "abc123").build();
 
-        assertThrows(RuntimeException.class, "java.lang.RuntimeException: encryption_key cannot be null", () -> {
+        Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
             try {
                 new JwtVendor(settings, Optional.empty()).createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
+        Assert.assertEquals("java.lang.RuntimeException: encryption_key cannot be null", exception.getMessage());
     }
 
     @Test
@@ -174,41 +176,13 @@ public class JwtVendorTest {
         Settings settings = Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        assertThrows(RuntimeException.class, "java.lang.Exception: Roles cannot be null", () -> {
+        Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
             try {
                 jwtVendor.createJwt(issuer, subject, audience, expirySecond, roles, List.of());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
-    }
-
-    public static <T extends Throwable> T assertThrows(Class<T> expectedType, String expectedMessage, Runnable executable) {
-        try {
-            executable.run();
-        } catch (Throwable actualException) {
-            if (expectedType.isInstance(actualException)) {
-                if (actualException.getMessage().equals(expectedMessage)) {
-                    return expectedType.cast(actualException);
-                } else {
-                    String message = String.format(
-                        "Expected %s with message '%s', but got message '%s' instead",
-                        expectedType.getSimpleName(),
-                        expectedMessage,
-                        actualException.getMessage()
-                    );
-                    throw new AssertionError(message, actualException);
-                }
-            } else {
-                String message = String.format(
-                    "Expected %s to be thrown, but %s was thrown instead",
-                    expectedType.getSimpleName(),
-                    actualException.getClass().getSimpleName()
-                );
-                throw new AssertionError(message, actualException);
-            }
-        }
-        String message = String.format("Expected %s to be thrown, but nothing was thrown", expectedType.getSimpleName());
-        throw new AssertionError(message);
+        Assert.assertEquals("java.lang.Exception: Roles cannot be null", exception.getMessage());
     }
 }

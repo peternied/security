@@ -221,7 +221,6 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             log.error("Cannot authenticate user with JWT because of ", e);
             return null;
         } catch (Exception e) {
-            e.printStackTrace();
             if (log.isDebugEnabled()) {
                 log.debug("Invalid or expired JWT token.", e);
             }

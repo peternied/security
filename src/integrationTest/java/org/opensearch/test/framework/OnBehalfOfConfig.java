@@ -27,12 +27,12 @@ public class OnBehalfOfConfig implements ToXContentObject {
         return this;
     }
 
-    public OnBehalfOfConfig signing_key(String signing_key) {
+    public OnBehalfOfConfig signingKey(String signing_key) {
         this.signing_key = signing_key;
         return this;
     }
 
-    public OnBehalfOfConfig encryption_key(String encryption_key) {
+    public OnBehalfOfConfig encryptionKey(String encryption_key) {
         this.encryption_key = encryption_key;
         return this;
     }

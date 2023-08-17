@@ -79,7 +79,7 @@ public class OnBehalfOfJwtAuthenticationTest {
             )
         )
         .authc(AUTHC_HTTPBASIC_INTERNAL)
-        .onBehalfOf(new OnBehalfOfConfig().oboEnabled(oboEnabled).signing_key(signingKey).encryption_key(encryptionKey))
+        .onBehalfOf(new OnBehalfOfConfig().oboEnabled(oboEnabled).signingKey(signingKey).encryptionKey(encryptionKey))
         .build();
 
     @Test

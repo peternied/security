@@ -28,6 +28,7 @@ import org.opensearch.core.common.transport.TransportAddress;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
+import org.opensearch.rest.NamedRoute;
 import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestRequest.Method;
@@ -39,9 +40,20 @@ import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 
+import static org.opensearch.rest.RestRequest.Method.POST;
 import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
 
 public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
+
+    private static final List<Route> routes = addRoutesPrefix(
+            ImmutableList.of(
+                    new NamedRoute.Builder().method(POST)
+                            .path("/user/onbehalfof")
+                            .uniqueName("security:obo/create")
+                            .build()
+            ),
+            "/_plugins/_security/api"
+    );
 
     private JwtVendor vendor;
     private final ThreadPool threadPool;
@@ -85,9 +97,9 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return addRoutesPrefix(ImmutableList.of(new Route(Method.POST, "/user/onbehalfof")));
+        return routes;
     }
-
+    
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         switch (request.method()) {

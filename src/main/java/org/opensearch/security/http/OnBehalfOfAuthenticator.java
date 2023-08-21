@@ -49,7 +49,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
 
     private static final String REGEX_PATH_PREFIX = "/(" + LEGACY_OPENDISTRO_PREFIX + "|" + PLUGINS_PREFIX + ")/" + "(.*)";
     private static final Pattern PATTERN_PATH_PREFIX = Pattern.compile(REGEX_PATH_PREFIX);
-    private static final String ON_BEHALF_OF_SUFFIX = "api/user/onbehalfof";
+    private static final String ON_BEHALF_OF_SUFFIX = "api/generateobotoken";
     private static final String ACCOUNT_SUFFIX = "api/account";
 
     protected final Logger log = LogManager.getLogger(this.getClass());

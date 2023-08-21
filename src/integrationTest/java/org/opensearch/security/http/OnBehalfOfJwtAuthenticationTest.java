@@ -58,7 +58,7 @@ public class OnBehalfOfJwtAuthenticationTest {
     public static final String DEFAULT_PASSWORD = "secret";
     public static final String NEW_PASSWORD = "testPassword123!!";
     public static final String OBO_TOKEN_REASON = "{\"reason\":\"Test generation\"}";
-    public static final String OBO_ENDPOINT_PREFIX = "_plugins/_security/api/user/onbehalfof";
+    public static final String OBO_ENDPOINT_PREFIX = "_plugins/_security/api/generateobotoken";
     public static final String OBO_DESCRIPTION = "{\"description\":\"Testing\", \"service\":\"self-issued\"}";
     public static final String CURRENT_AND_NEW_PASSWORDS = "{ \"current_password\": \""
         + DEFAULT_PASSWORD

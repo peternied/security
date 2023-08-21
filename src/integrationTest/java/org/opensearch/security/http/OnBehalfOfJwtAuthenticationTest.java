@@ -35,6 +35,8 @@ import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
+import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX;
+import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_ROLES_ENABLED;
 import static org.opensearch.test.framework.TestSecurityConfig.AuthcDomain.AUTHC_HTTPBASIC_INTERNAL;
 import static org.opensearch.test.framework.TestSecurityConfig.Role.ALL_ACCESS;
 
@@ -71,12 +73,7 @@ public class OnBehalfOfJwtAuthenticationTest {
         .anonymousAuth(false)
         .users(ADMIN_USER)
         .nodeSettings(
-            Map.of(
-                "plugins.security.allow_default_init_securityindex",
-                true,
-                "plugins.security.restapi.roles_enabled",
-                List.of("user_admin__all_access")
-            )
+            Map.of(SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true, SECURITY_RESTAPI_ROLES_ENABLED, List.of("user_admin__all_access"))
         )
         .authc(AUTHC_HTTPBASIC_INTERNAL)
         .onBehalfOf(new OnBehalfOfConfig().oboEnabled(oboEnabled).signingKey(signingKey).encryptionKey(encryptionKey))

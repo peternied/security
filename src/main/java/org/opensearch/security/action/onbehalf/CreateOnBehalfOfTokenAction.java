@@ -41,6 +41,8 @@ import org.opensearch.threadpool.ThreadPool;
 
 import static org.opensearch.rest.RestRequest.Method.POST;
 import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
+import static org.opensearch.security.support.ConfigConstants.OBO_DEFAULT_EXPIRY_SECONDS;
+import static org.opensearch.security.support.ConfigConstants.OBO_MAX_EXPIRY_SECONDS;
 
 public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
 
@@ -129,8 +131,8 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                     final Integer tokenDuration = Optional.ofNullable(requestBody.get("duration"))
                         .map(value -> (String) value)
                         .map(Integer::parseInt)
-                        .map(value -> Math.min(value, 10 * 60)) // Max duration is 10 minutes
-                        .orElse(5 * 60); // Fallback to default of 5 minutes;
+                        .map(value -> Math.min(value, OBO_MAX_EXPIRY_SECONDS)) // Max duration is 10 minutes
+                        .orElse(OBO_DEFAULT_EXPIRY_SECONDS); // Fallback to default of 5 minutes;
 
                     final String service = (String) requestBody.getOrDefault("service", "self-issued");
                     final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
@@ -148,7 +150,7 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                         user.getRoles().stream().collect(Collectors.toList())
                     );
                     builder.field("onBehalfOfToken", token);
-                    builder.field("duration", tokenDuration + " seconds");
+                    builder.field("duration", tokenDuration);
                     builder.endObject();
 
                     response = new BytesRestResponse(RestStatus.OK, builder);

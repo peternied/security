@@ -56,8 +56,6 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
 
     private static final Pattern BEARER = Pattern.compile("^\\s*Bearer\\s.*", Pattern.CASE_INSENSITIVE);
     private static final String BEARER_PREFIX = "bearer ";
-    private static final String TOKEN_TYPE_CLAIM = "typ";
-    private static final String TOKEN_TYPE = "obo";
 
     private final JwtParser jwtParser;
     private final String encryptionKey;

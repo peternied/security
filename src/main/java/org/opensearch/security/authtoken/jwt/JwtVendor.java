@@ -30,6 +30,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.common.settings.Settings;
+import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.support.ConfigConstants;
 
 public class JwtVendor {
@@ -48,11 +49,11 @@ public class JwtVendor {
         try {
             this.signingKey = createJwkFromSettings(settings);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw ExceptionUtils.createJwkCreationException(e);
         }
         this.jwtProducer = jwtProducer;
         if (settings.get("encryption_key") == null) {
-            throw new RuntimeException("encryption_key cannot be null");
+            throw new IllegalArgumentException("encryption_key cannot be null");
         } else {
             this.claimsEncryptionKey = settings.get("encryption_key");
         }

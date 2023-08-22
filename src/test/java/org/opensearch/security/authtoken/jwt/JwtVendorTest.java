@@ -161,7 +161,7 @@ public class JwtVendorTest {
                 throw new RuntimeException(e);
             }
         });
-        Assert.assertEquals("java.lang.RuntimeException: encryption_key cannot be null", exception.getMessage());
+        Assert.assertEquals("java.lang.IllegalArgumentException: encryption_key cannot be null", exception.getMessage());
     }
 
     @Test

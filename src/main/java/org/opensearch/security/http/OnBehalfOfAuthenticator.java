@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.security.WeakKeyException;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -81,24 +80,19 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
     }
 
     private List<String> extractSecurityRolesFromClaims(Claims claims) {
-        Object rolesObject = ObjectUtils.firstNonNull(claims.get("er"), claims.get("dr"));
-        List<String> roles;
+        Object er = claims.get("er");
+        Object dr = claims.get("dr");
+        String rolesClaim = "";
 
-        if (rolesObject == null) {
-            log.warn("This is a malformed On-behalf-of Token");
-            roles = List.of();
+        if (er != null) {
+            rolesClaim = EncryptionDecryptionUtil.decrypt(encryptionKey, er.toString());
+        } else if (dr != null) {
+            rolesClaim = dr.toString();
         } else {
-            final String rolesClaim = rolesObject.toString();
-
-            // Extracting roles based on the compatbility mode
-            String decryptedRoles = rolesClaim;
-            if (rolesObject == claims.get("er")) {
-                decryptedRoles = EncryptionDecryptionUtil.decrypt(encryptionKey, rolesClaim);
-            }
-            roles = Arrays.stream(decryptedRoles.split(",")).map(String::trim).collect(Collectors.toList());
+            log.warn("This is a malformed On-behalf-of Token");
         }
 
-        return roles;
+        return Arrays.stream(rolesClaim.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableList());
     }
 
     private String[] extractBackendRolesFromClaims(Claims claims) {

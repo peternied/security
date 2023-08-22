@@ -130,15 +130,12 @@ public class JwtVendor {
 
         jwtClaims.setNotBefore(timeMillis);
 
-        if (expirySeconds == null) {
-            long expiryTime = timeProvider.getAsLong() + 300;
-            jwtClaims.setExpiryTime(expiryTime);
-        } else if (expirySeconds > 0) {
-            long expiryTime = timeProvider.getAsLong() + expirySeconds;
-            jwtClaims.setExpiryTime(expiryTime);
-        } else {
+        expirySeconds = (expirySeconds == null) ? 300 : expirySeconds;
+        if (expirySeconds <= 0) {
             throw new Exception("The expiration time should be a positive integer");
         }
+        long expiryTime = timeProvider.getAsLong() + expirySeconds;
+        jwtClaims.setExpiryTime(expiryTime);
 
         if (roles != null) {
             String listOfRoles = String.join(",", roles);

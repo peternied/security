@@ -107,7 +107,6 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
         String[] backendRoles;
 
         if (backendRolesObject == null) {
-            log.warn("This is a malformed On-behalf-of Token");
             backendRoles = new String[0];
         } else {
             // Extracting roles based on the compatibility mode

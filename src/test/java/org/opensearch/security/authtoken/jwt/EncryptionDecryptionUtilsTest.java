@@ -15,7 +15,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import java.util.Base64;
 
-public class EncryptionDecryptionUtilTest {
+public class EncryptionDecryptionUtilsTest {
 
     @Test
     public void testEncryptDecrypt() {
@@ -36,12 +36,9 @@ public class EncryptionDecryptionUtilTest {
 
         String encryptedString = EncryptionDecryptionUtil.encrypt(secret1, data);
 
-        try {
-            EncryptionDecryptionUtil.decrypt(secret2, encryptedString);
-            Assert.fail("Should have thrown an exception when decrypting with a wrong key");
-        } catch (RuntimeException e) {
-            // Expected exception
-        }
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> EncryptionDecryptionUtil.decrypt(secret2, encryptedString));
+
+        Assert.assertEquals("The cipher was unable to perform pass over data", ex.getMessage());
     }
 
     @Test
@@ -49,12 +46,12 @@ public class EncryptionDecryptionUtilTest {
         String secret = Base64.getEncoder().encodeToString("mySecretKey12345".getBytes());
         String corruptedEncryptedString = "corruptedData";
 
-        try {
-            EncryptionDecryptionUtil.decrypt(secret, corruptedEncryptedString);
-            Assert.fail("Should have thrown an exception when trying to decrypt corrupted data");
-        } catch (RuntimeException e) {
-            // Expected exception
-        }
+        RuntimeException ex = Assert.assertThrows(
+            RuntimeException.class,
+            () -> EncryptionDecryptionUtil.decrypt(secret, corruptedEncryptedString)
+        );
+
+        Assert.assertEquals("Last unit does not have enough valid bits", ex.getMessage());
     }
 
     @Test
@@ -69,7 +66,7 @@ public class EncryptionDecryptionUtilTest {
     }
 
     @Test(expected = NullPointerException.class)
-    public void testEncryptDecryptNullValue() {
+    public void testEncryptNullValue() {
         String secret = Base64.getEncoder().encodeToString("mySecretKey12345".getBytes());
         String data = null;
 

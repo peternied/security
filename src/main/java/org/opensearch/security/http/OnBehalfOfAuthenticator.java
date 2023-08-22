@@ -63,8 +63,8 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
     private final EncryptionDecryptionUtil encryptionUtil;
 
     public OnBehalfOfAuthenticator(Settings settings, String clusterName) {
-        String oboEnabledSetting = settings.get("enabled");
-        oboEnabled = oboEnabledSetting == null ? Boolean.TRUE : Boolean.valueOf(oboEnabledSetting);
+        String oboEnabledSetting = settings.get("enabled", "true");
+        oboEnabled = Boolean.parseBoolean(oboEnabledSetting);
         encryptionKey = settings.get("encryption_key");
         jwtParser = initParser(settings.get("signing_key"));
         this.clusterName = clusterName;
@@ -151,7 +151,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             return null;
         }
 
-        if (!isAllowedRequest(request)) {
+        if (!isRequestAllowed(request)) {
             return null;
         }
 
@@ -226,7 +226,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
         }
     }
 
-    public Boolean isAllowedRequest(final RestRequest request) {
+    public Boolean isRequestAllowed(final RestRequest request) {
         Matcher matcher = PATTERN_PATH_PREFIX.matcher(request.path());
         final String suffix = matcher.matches() ? matcher.group(2) : null;
         if (request.method() == RestRequest.Method.POST && ON_BEHALF_OF_SUFFIX.equals(suffix)

@@ -27,7 +27,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Objects;
 
-public class keyUtils {
+public class KeyUtils {
 
     public static JwtParser createJwtParserFromSigningKey(final String signingKey, final Logger log) {
         final SecurityManager sm = System.getSecurityManager();

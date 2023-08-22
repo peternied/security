@@ -35,7 +35,7 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.security.auth.HTTPAuthenticator;
 import org.opensearch.security.user.AuthCredentials;
-import org.opensearch.security.util.keyUtils;
+import org.opensearch.security.util.KeyUtils;
 
 public class HTTPJwtAuthenticator implements HTTPAuthenticator {
 
@@ -57,7 +57,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         super();
 
         String signingKey = settings.get("signing_key");
-        JwtParser _jwtParser = keyUtils.createJwtParserFromSigningKey(signingKey, log);
+        JwtParser _jwtParser = KeyUtils.createJwtParserFromSigningKey(signingKey, log);
 
         jwtUrlParameter = settings.get("jwt_url_parameter");
         jwtHeaderName = settings.get("jwt_header", HttpHeaders.AUTHORIZATION);

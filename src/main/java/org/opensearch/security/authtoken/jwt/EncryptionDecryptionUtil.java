@@ -21,16 +21,22 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class EncryptionDecryptionUtil {
 
-    public static String encrypt(final String secret, final String data) {
-        final Cipher cipher = createCipherFromSecret(secret, CipherMode.ENCRYPT);
-        final byte[] cipherText = createCipherText(cipher, data.getBytes(StandardCharsets.UTF_8));
-        return Base64.getEncoder().encodeToString(cipherText);
+    private final Cipher encryptCipher;
+    private final Cipher decryptCipher;
+
+    public EncryptionDecryptionUtil(final String secret) {
+        this.encryptCipher = createCipherFromSecret(secret, CipherMode.ENCRYPT);
+        this.decryptCipher = createCipherFromSecret(secret, CipherMode.DECRYPT);
     }
 
-    public static String decrypt(final String secret, final String encryptedString) {
-        final Cipher cipher = createCipherFromSecret(secret, CipherMode.DECRYPT);
-        final byte[] cipherText = createCipherText(cipher, Base64.getDecoder().decode(encryptedString));
-        return new String(cipherText, StandardCharsets.UTF_8);
+    public String encrypt(final String data) {
+        byte[] encryptedBytes = processWithCipher(data.getBytes(StandardCharsets.UTF_8), encryptCipher);
+        return Base64.getEncoder().encodeToString(encryptedBytes);
+    }
+
+    public String decrypt(final String encryptedString) {
+        byte[] decodedBytes = Base64.getDecoder().decode(encryptedString);
+        return new String(processWithCipher(decodedBytes, decryptCipher), StandardCharsets.UTF_8);
     }
 
     private static Cipher createCipherFromSecret(final String secret, final CipherMode mode) {
@@ -41,15 +47,15 @@ public class EncryptionDecryptionUtil {
             cipher.init(mode.opmode, originalKey);
             return cipher;
         } catch (final Exception e) {
-            throw new RuntimeException("Error creating cipher from secret in mode " + mode.name());
+            throw new RuntimeException("Error creating cipher from secret in mode " + mode.name(), e);
         }
     }
 
-    private static byte[] createCipherText(final Cipher cipher, final byte[] data) {
+    private static byte[] processWithCipher(final byte[] data, final Cipher cipher) {
         try {
             return cipher.doFinal(data);
         } catch (final Exception e) {
-            throw new RuntimeException("The cipher was unable to perform pass over data");
+            throw new RuntimeException("Error processing data with cipher", e);
         }
     }
 

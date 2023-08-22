@@ -22,8 +22,10 @@ public class EncryptionDecryptionUtilsTest {
         String secret = Base64.getEncoder().encodeToString("mySecretKey12345".getBytes());
         String data = "Hello, OpenSearch!";
 
-        String encryptedString = EncryptionDecryptionUtil.encrypt(secret, data);
-        String decryptedString = EncryptionDecryptionUtil.decrypt(secret, encryptedString);
+        EncryptionDecryptionUtil util = new EncryptionDecryptionUtil(secret);
+
+        String encryptedString = util.encrypt(data);
+        String decryptedString = util.decrypt(encryptedString);
 
         Assert.assertEquals(data, decryptedString);
     }
@@ -34,11 +36,13 @@ public class EncryptionDecryptionUtilsTest {
         String secret2 = Base64.getEncoder().encodeToString("wrongKey1234567".getBytes());
         String data = "Hello, OpenSearch!";
 
-        String encryptedString = EncryptionDecryptionUtil.encrypt(secret1, data);
+        EncryptionDecryptionUtil util1 = new EncryptionDecryptionUtil(secret1);
+        String encryptedString = util1.encrypt(data);
 
-        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> EncryptionDecryptionUtil.decrypt(secret2, encryptedString));
+        EncryptionDecryptionUtil util2 = new EncryptionDecryptionUtil(secret2);
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> util2.decrypt(encryptedString));
 
-        Assert.assertEquals("The cipher was unable to perform pass over data", ex.getMessage());
+        Assert.assertEquals("Error processing data with cipher", ex.getMessage());
     }
 
     @Test
@@ -46,10 +50,8 @@ public class EncryptionDecryptionUtilsTest {
         String secret = Base64.getEncoder().encodeToString("mySecretKey12345".getBytes());
         String corruptedEncryptedString = "corruptedData";
 
-        RuntimeException ex = Assert.assertThrows(
-            RuntimeException.class,
-            () -> EncryptionDecryptionUtil.decrypt(secret, corruptedEncryptedString)
-        );
+        EncryptionDecryptionUtil util = new EncryptionDecryptionUtil(secret);
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> util.decrypt(corruptedEncryptedString));
 
         Assert.assertEquals("Last unit does not have enough valid bits", ex.getMessage());
     }
@@ -59,8 +61,9 @@ public class EncryptionDecryptionUtilsTest {
         String secret = Base64.getEncoder().encodeToString("mySecretKey12345".getBytes());
         String data = "";
 
-        String encryptedString = EncryptionDecryptionUtil.encrypt(secret, data);
-        String decryptedString = EncryptionDecryptionUtil.decrypt(secret, encryptedString);
+        EncryptionDecryptionUtil util = new EncryptionDecryptionUtil(secret);
+        String encryptedString = util.encrypt(data);
+        String decryptedString = util.decrypt(encryptedString);
 
         Assert.assertEquals(data, decryptedString);
     }
@@ -70,7 +73,8 @@ public class EncryptionDecryptionUtilsTest {
         String secret = Base64.getEncoder().encodeToString("mySecretKey12345".getBytes());
         String data = null;
 
-        EncryptionDecryptionUtil.encrypt(secret, data);
+        EncryptionDecryptionUtil util = new EncryptionDecryptionUtil(secret);
+        util.encrypt(data);
     }
 
     @Test(expected = NullPointerException.class)
@@ -78,6 +82,7 @@ public class EncryptionDecryptionUtilsTest {
         String secret = Base64.getEncoder().encodeToString("mySecretKey12345".getBytes());
         String data = null;
 
-        EncryptionDecryptionUtil.decrypt(secret, data);
+        EncryptionDecryptionUtil util = new EncryptionDecryptionUtil(secret);
+        util.decrypt(data);
     }
 }

@@ -60,12 +60,15 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
     private final Boolean oboEnabled;
     private final String clusterName;
 
+    private final EncryptionDecryptionUtil encryptionUtil;
+
     public OnBehalfOfAuthenticator(Settings settings, String clusterName) {
         String oboEnabledSetting = settings.get("enabled");
         oboEnabled = oboEnabledSetting == null ? Boolean.TRUE : Boolean.valueOf(oboEnabledSetting);
         encryptionKey = settings.get("encryption_key");
         jwtParser = initParser(settings.get("signing_key"));
         this.clusterName = clusterName;
+        this.encryptionUtil = new EncryptionDecryptionUtil(encryptionKey);
     }
 
     private JwtParser initParser(final String signingKey) {
@@ -84,7 +87,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
         String rolesClaim = "";
 
         if (er != null) {
-            rolesClaim = EncryptionDecryptionUtil.decrypt(encryptionKey, er.toString());
+            rolesClaim = encryptionUtil.decrypt(er.toString());
         } else if (dr != null) {
             rolesClaim = dr.toString();
         } else {

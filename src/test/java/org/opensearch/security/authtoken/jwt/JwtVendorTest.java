@@ -60,8 +60,8 @@ public class JwtVendorTest {
         List<String> roles = List.of("IT", "HR");
         List<String> backendRoles = List.of("Sales", "Support");
         String expectedRoles = "IT,HR";
-        Integer expirySeconds = 300;
-        LongSupplier currentTime = () -> (int) 100;
+        int expirySeconds = 300;
+        LongSupplier currentTime = () -> (long) 100;
         String claimsEncryptionKey = RandomStringUtils.randomAlphanumeric(16);
         Settings settings = Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
         Long expectedExp = currentTime.getAsLong() + expirySeconds;
@@ -78,8 +78,8 @@ public class JwtVendorTest {
         Assert.assertNotNull(jwt.getClaim("iat"));
         Assert.assertNotNull(jwt.getClaim("exp"));
         Assert.assertEquals(expectedExp, jwt.getClaim("exp"));
-        Assert.assertNotEquals(expectedRoles, jwt.getClaim("er"));
-        Assert.assertEquals(expectedRoles, EncryptionDecryptionUtil.decrypt(claimsEncryptionKey, jwt.getClaim("er").toString()));
+        EncryptionDecryptionUtil encryptionUtil = new EncryptionDecryptionUtil(claimsEncryptionKey);
+        Assert.assertEquals(expectedRoles, encryptionUtil.decrypt(jwt.getClaim("er").toString()));
         Assert.assertNull(jwt.getClaim("br"));
     }
 
@@ -93,15 +93,13 @@ public class JwtVendorTest {
         String expectedRoles = "IT,HR";
         String expectedBackendRoles = "Sales,Support";
 
-        Integer expirySeconds = 300;
-        LongSupplier currentTime = () -> (int) 100;
+        int expirySeconds = 300;
+        LongSupplier currentTime = () -> (long) 100;
         String claimsEncryptionKey = RandomStringUtils.randomAlphanumeric(16);
         Settings settings = Settings.builder()
             .put("signing_key", "abc123")
             .put("encryption_key", claimsEncryptionKey)
-            // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
             .put(ConfigConstants.EXTENSIONS_BWC_PLUGIN_MODE, true)
-            // CS-ENFORCE-SINGLE
             .build();
         Long expectedExp = currentTime.getAsLong() + expirySeconds;
 
@@ -117,8 +115,8 @@ public class JwtVendorTest {
         Assert.assertNotNull(jwt.getClaim("iat"));
         Assert.assertNotNull(jwt.getClaim("exp"));
         Assert.assertEquals(expectedExp, jwt.getClaim("exp"));
-        Assert.assertNotEquals(expectedRoles, jwt.getClaim("er"));
-        Assert.assertEquals(expectedRoles, EncryptionDecryptionUtil.decrypt(claimsEncryptionKey, jwt.getClaim("er").toString()));
+        EncryptionDecryptionUtil encryptionUtil = new EncryptionDecryptionUtil(claimsEncryptionKey);
+        Assert.assertEquals(expectedRoles, encryptionUtil.decrypt(jwt.getClaim("er").toString()));
         Assert.assertNotNull(jwt.getClaim("br"));
         Assert.assertEquals(expectedBackendRoles, jwt.getClaim("br"));
     }
@@ -170,14 +168,14 @@ public class JwtVendorTest {
         String subject = "admin";
         String audience = "audience_0";
         List<String> roles = null;
-        Integer expirySecond = 300;
+        Integer expirySeconds = 300;
         String claimsEncryptionKey = RandomStringUtils.randomAlphanumeric(16);
         Settings settings = Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
         Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
             try {
-                jwtVendor.createJwt(issuer, subject, audience, expirySecond, roles, List.of());
+                jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

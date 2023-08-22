@@ -43,6 +43,7 @@ public class JwtVendor {
     private final JoseJwtProducer jwtProducer;
     private final LongSupplier timeProvider;
     private final Boolean bwcModeEnabled;
+    private final EncryptionDecryptionUtil encryptionDecryptionUtil;
 
     public JwtVendor(final Settings settings, final Optional<LongSupplier> timeProvider) {
         JoseJwtProducer jwtProducer = new JoseJwtProducer();
@@ -56,6 +57,7 @@ public class JwtVendor {
             throw new IllegalArgumentException("encryption_key cannot be null");
         } else {
             this.claimsEncryptionKey = settings.get("encryption_key");
+            this.encryptionDecryptionUtil = new EncryptionDecryptionUtil(claimsEncryptionKey);
         }
         if (timeProvider.isPresent()) {
             this.timeProvider = timeProvider.get();
@@ -140,7 +142,7 @@ public class JwtVendor {
 
         if (roles != null) {
             String listOfRoles = String.join(",", roles);
-            jwtClaims.setProperty("er", EncryptionDecryptionUtil.encrypt(claimsEncryptionKey, listOfRoles));
+            jwtClaims.setProperty("er", encryptionDecryptionUtil.encrypt(listOfRoles));
         } else {
             throw new Exception("Roles cannot be null");
         }

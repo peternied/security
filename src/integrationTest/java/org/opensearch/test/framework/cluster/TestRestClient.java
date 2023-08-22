@@ -138,7 +138,7 @@ public class TestRestClient implements AutoCloseable {
     public HttpResponse getOnBehalfOfToken(String jsonData, Header... headers) {
         try {
             HttpPost httpPost = new HttpPost(
-                new URIBuilder(getHttpServerUri() + "/_plugins/_security/api/generateobotokenf?pretty").build()
+                new URIBuilder(getHttpServerUri() + "/_plugins/_security/api/generateobotoken?pretty").build()
             );
             httpPost.setEntity(toStringEntity(jsonData));
             return executeRequest(httpPost, mergeHeaders(CONTENT_TYPE_JSON, headers));

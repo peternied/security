@@ -18,6 +18,7 @@ import java.util.Map;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -57,6 +58,8 @@ public class OnBehalfOfJwtAuthenticationTest {
         );
     private static final String encryptionKey = Base64.getEncoder().encodeToString("encryptionKey".getBytes(StandardCharsets.UTF_8));
     public static final String ADMIN_USER_NAME = "admin";
+    public static final String OBO_USER_NAME_WITH_PERM = "obo_user";
+    public static final String OBO_USER_NAME_NO_PERM = "obo_user_no_perm";
     public static final String DEFAULT_PASSWORD = "secret";
     public static final String NEW_PASSWORD = "testPassword123!!";
     public static final String OBO_TOKEN_REASON = "{\"reason\":\"Test generation\"}";
@@ -68,10 +71,18 @@ public class OnBehalfOfJwtAuthenticationTest {
         + NEW_PASSWORD
         + "\" }";
 
+    protected final static TestSecurityConfig.User OBO_USER = new TestSecurityConfig.User(OBO_USER_NAME_WITH_PERM).roles(
+        new TestSecurityConfig.Role("obo_access_role").clusterPermissions("security:obo/create")
+    );
+
+    protected final static TestSecurityConfig.User OBO_USER_NO_PERM = new TestSecurityConfig.User(OBO_USER_NAME_NO_PERM).roles(
+        new TestSecurityConfig.Role("obo_user_no_perm")
+    );
+
     @ClassRule
     public static final LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.SINGLENODE)
         .anonymousAuth(false)
-        .users(ADMIN_USER)
+        .users(ADMIN_USER, OBO_USER, OBO_USER_NO_PERM)
         .nodeSettings(
             Map.of(SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true, SECURITY_RESTAPI_ROLES_ENABLED, List.of("user_admin__all_access"))
         )
@@ -113,6 +124,20 @@ public class OnBehalfOfJwtAuthenticationTest {
         try (TestRestClient client = cluster.getRestClient(adminOboAuthHeader)) {
             TestRestClient.HttpResponse response = client.changeInternalUserPassword(CURRENT_AND_NEW_PASSWORDS, adminOboAuthHeader);
             response.assertStatusCode(401);
+        }
+    }
+
+    @Test
+    public void shouldAuthenticateForNonAdminUserWithOBOPermission() {
+        String oboToken = generateOboToken(OBO_USER_NAME_WITH_PERM, DEFAULT_PASSWORD);
+        Header oboAuthHeader = new BasicHeader("Authorization", "Bearer " + oboToken);
+        authenticateWithOboToken(oboAuthHeader, OBO_USER_NAME_WITH_PERM, 200);
+    }
+
+    @Test
+    public void shouldNotAuthenticateForNonAdminUserWithoutOBOPermission() {
+        try (TestRestClient client = cluster.getRestClient(OBO_USER_NO_PERM)) {
+            assertThat(client.post(OBO_ENDPOINT_PREFIX).getStatusCode(), equalTo(HttpStatus.SC_UNAUTHORIZED));
         }
     }
 

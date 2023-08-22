@@ -92,15 +92,15 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             log.warn("This is a malformed On-behalf-of Token");
         }
 
-        return Arrays.stream(rolesClaim.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableList());
+        List<String> roles = Arrays.stream(rolesClaim.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toUnmodifiableList());
+
+        return roles;
     }
 
     private String[] extractBackendRolesFromClaims(Claims claims) {
-        // Object backendRolesObject = ObjectUtils.firstNonNull(claims.get("ebr"), claims.get("dbr"));
-        if (!claims.containsKey("br")) {
-            return null;
-        }
-
         Object backendRolesObject = claims.get("br");
         String[] backendRoles;
 
@@ -108,11 +108,8 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             log.warn("This is a malformed On-behalf-of Token");
             backendRoles = new String[0];
         } else {
-            final String backendRolesClaim = backendRolesObject.toString();
-
             // Extracting roles based on the compatibility mode
-            String decryptedBackendRoles = backendRolesClaim;
-            backendRoles = Arrays.stream(decryptedBackendRoles.split(",")).map(String::trim).toArray(String[]::new);
+            backendRoles = Arrays.stream(backendRolesObject.toString().split(",")).map(String::trim).toArray(String[]::new);
         }
 
         return backendRoles;

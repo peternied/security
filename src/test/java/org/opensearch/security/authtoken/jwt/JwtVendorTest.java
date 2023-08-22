@@ -80,7 +80,7 @@ public class JwtVendorTest {
         Assert.assertEquals(expectedExp, jwt.getClaim("exp"));
         Assert.assertNotEquals(expectedRoles, jwt.getClaim("er"));
         Assert.assertEquals(expectedRoles, EncryptionDecryptionUtil.decrypt(claimsEncryptionKey, jwt.getClaim("er").toString()));
-        Assert.assertNull(jwt.getClaim("dbr"));
+        Assert.assertNull(jwt.getClaim("br"));
     }
 
     @Test
@@ -111,7 +111,6 @@ public class JwtVendorTest {
         JwsJwtCompactConsumer jwtConsumer = new JwsJwtCompactConsumer(encodedJwt);
         JwtToken jwt = jwtConsumer.getJwtToken();
 
-        Assert.assertEquals("obo", jwt.getClaim("typ"));
         Assert.assertEquals("cluster_0", jwt.getClaim("iss"));
         Assert.assertEquals("admin", jwt.getClaim("sub"));
         Assert.assertEquals("audience_0", jwt.getClaim("aud"));
@@ -120,8 +119,8 @@ public class JwtVendorTest {
         Assert.assertEquals(expectedExp, jwt.getClaim("exp"));
         Assert.assertNotEquals(expectedRoles, jwt.getClaim("er"));
         Assert.assertEquals(expectedRoles, EncryptionDecryptionUtil.decrypt(claimsEncryptionKey, jwt.getClaim("er").toString()));
-        Assert.assertNotNull(jwt.getClaim("dbr"));
-        Assert.assertEquals(expectedBackendRoles, jwt.getClaim("dbr"));
+        Assert.assertNotNull(jwt.getClaim("br"));
+        Assert.assertEquals(expectedBackendRoles, jwt.getClaim("br"));
     }
 
     @Test

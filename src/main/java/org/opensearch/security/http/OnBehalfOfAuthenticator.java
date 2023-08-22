@@ -16,7 +16,6 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -136,7 +135,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
 
     private AuthCredentials extractCredentials0(final RestRequest request) {
         if (!oboEnabled) {
-            log.error("On-behalf-of authentication has been disabled");
+            log.error("On-behalf-of authentication is disabled");
             return null;
         }
 
@@ -145,53 +144,33 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             return null;
         }
 
-        String jwtToken = request.header(HttpHeaders.AUTHORIZATION);
-
-        if (jwtToken == null || jwtToken.length() == 0) {
-            if (log.isDebugEnabled()) {
-                log.debug("No JWT token found in '{}' header", HttpHeaders.AUTHORIZATION);
-            }
-            return null;
-        }
-
-        if (!BEARER.matcher(jwtToken).matches()) {
-            jwtToken = null;
-        }
-
-        if (jwtToken != null && Pattern.compile(BEARER_PREFIX).matcher(jwtToken.toLowerCase()).find()) {
-            jwtToken = jwtToken.substring(jwtToken.toLowerCase().indexOf(BEARER_PREFIX) + BEARER_PREFIX.length());
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("No Bearer scheme found in header");
-            }
-        }
-
+        String jwtToken = extractJwtFromHeader(request);
         if (jwtToken == null) {
             return null;
         }
 
-        try {
-            if (!isAllowedRequest(request)) {
-                return null;
-            }
+        if (!isAllowedRequest(request)) {
+            return null;
+        }
 
+        try {
             final Claims claims = jwtParser.parseClaimsJws(jwtToken).getBody();
 
             final String subject = claims.getSubject();
-            if (Objects.isNull(subject)) {
+            if (subject == null) {
                 log.error("Valid jwt on behalf of token with no subject");
                 return null;
             }
 
             final String audience = claims.getAudience();
-            if (Objects.isNull(audience)) {
+            if (audience == null) {
                 log.error("Valid jwt on behalf of token with no audience");
                 return null;
             }
 
             final String issuer = claims.getIssuer();
             if (!issuer.equals(clusterName)) {
-                log.error("This issuer of this OBO does not match the current cluster identifier");
+                log.error("The issuer of this OBO does not match the current cluster identifier");
                 return null;
             }
 
@@ -208,12 +187,40 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
 
         } catch (WeakKeyException e) {
             log.error("Cannot authenticate user with JWT because of ", e);
-            return null;
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid or expired JWT token.", e);
             }
+        }
+
+        return null;
+    }
+
+    private String extractJwtFromHeader(RestRequest request) {
+        String jwtToken = request.header(HttpHeaders.AUTHORIZATION);
+
+        if (jwtToken == null || jwtToken.isEmpty()) {
+            logDebug("No JWT token found in '{}' header", HttpHeaders.AUTHORIZATION);
             return null;
+        }
+
+        if (!BEARER.matcher(jwtToken).matches()) {
+            return null;
+        }
+
+        if (jwtToken.toLowerCase().contains(BEARER_PREFIX)) {
+            jwtToken = jwtToken.substring(jwtToken.toLowerCase().indexOf(BEARER_PREFIX) + BEARER_PREFIX.length());
+        } else {
+            logDebug("No Bearer scheme found in header");
+            return null;
+        }
+
+        return jwtToken;
+    }
+
+    private void logDebug(String message, Object... args) {
+        if (log.isDebugEnabled()) {
+            log.debug(message, args);
         }
     }
 

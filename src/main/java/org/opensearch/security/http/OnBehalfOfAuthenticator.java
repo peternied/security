@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.JwtParserBuilder;
 import io.jsonwebtoken.security.WeakKeyException;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.logging.log4j.LogManager;
@@ -66,19 +67,21 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
         String oboEnabledSetting = settings.get("enabled", "true");
         oboEnabled = Boolean.parseBoolean(oboEnabledSetting);
         encryptionKey = settings.get("encryption_key");
-        jwtParser = initParser(settings.get("signing_key"));
+        JwtParserBuilder builder = initParserBuilder(settings.get("signing_key"));
+        jwtParser = builder.build();
+
         this.clusterName = clusterName;
         this.encryptionUtil = new EncryptionDecryptionUtil(encryptionKey);
     }
 
-    private JwtParser initParser(final String signingKey) {
-        JwtParser _jwtParser = KeyUtils.createJwtParserFromSigningKey(signingKey, log);
+    private JwtParserBuilder initParserBuilder(final String signingKey) {
+        JwtParserBuilder jwtParserBuilder = KeyUtils.createJwtParserBuilderFromSigningKey(signingKey, log);
 
-        if (_jwtParser == null) {
+        if (jwtParserBuilder == null) {
             throw new RuntimeException("Unable to find on behalf of authenticator signing key");
         }
 
-        return _jwtParser;
+        return jwtParserBuilder;
     }
 
     private List<String> extractSecurityRolesFromClaims(Claims claims) {

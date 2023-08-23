@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.JwtParserBuilder;
 import io.jsonwebtoken.security.WeakKeyException;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.logging.log4j.LogManager;
@@ -57,7 +58,8 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         super();
 
         String signingKey = settings.get("signing_key");
-        JwtParser _jwtParser = KeyUtils.createJwtParserFromSigningKey(signingKey, log);
+
+        JwtParserBuilder jwtParserBuilder = KeyUtils.createJwtParserBuilderFromSigningKey(signingKey, log);
 
         jwtUrlParameter = settings.get("jwt_url_parameter");
         jwtHeaderName = settings.get("jwt_header", HttpHeaders.AUTHORIZATION);
@@ -68,14 +70,18 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         requireIssuer = settings.get("required_issuer");
 
         if (requireAudience != null) {
-            _jwtParser.requireAudience(requireAudience);
+            jwtParserBuilder = jwtParserBuilder.require("aud", requireAudience);
         }
 
         if (requireIssuer != null) {
-            _jwtParser.requireIssuer(requireIssuer);
+            jwtParserBuilder = jwtParserBuilder.require("iss", requireIssuer);
         }
 
-        jwtParser = _jwtParser;
+        if (jwtParserBuilder != null) {
+            jwtParser = jwtParserBuilder.build();
+        } else {
+            jwtParser = null;
+        }
     }
 
     @Override

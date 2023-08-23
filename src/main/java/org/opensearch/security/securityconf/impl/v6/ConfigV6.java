@@ -357,7 +357,7 @@ public class ConfigV6 {
 
     }
 
-    public static class OnBehalfOf {
+    public static class OnBehalfOfSettings {
         @JsonProperty("signing_key")
         private String signingKey;
         @JsonProperty("encryption_key")

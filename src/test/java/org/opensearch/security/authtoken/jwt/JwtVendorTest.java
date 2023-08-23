@@ -67,7 +67,7 @@ public class JwtVendorTest {
         Long expectedExp = currentTime.getAsLong() + expirySeconds;
 
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.of(currentTime));
-        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, backendRoles, false);
+        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, backendRoles, true);
 
         JwsJwtCompactConsumer jwtConsumer = new JwsJwtCompactConsumer(encodedJwt);
         JwtToken jwt = jwtConsumer.getJwtToken();
@@ -104,7 +104,7 @@ public class JwtVendorTest {
         Long expectedExp = currentTime.getAsLong() + expirySeconds;
 
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.of(currentTime));
-        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, backendRoles, true);
+        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, backendRoles, false);
 
         JwsJwtCompactConsumer jwtConsumer = new JwsJwtCompactConsumer(encodedJwt);
         JwtToken jwt = jwtConsumer.getJwtToken();
@@ -134,7 +134,7 @@ public class JwtVendorTest {
 
         Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
             try {
-                jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of(), false);
+                jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of(), true);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -154,7 +154,7 @@ public class JwtVendorTest {
 
         Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
             try {
-                new JwtVendor(settings, Optional.empty()).createJwt(issuer, subject, audience, expirySeconds, roles, List.of(), false);
+                new JwtVendor(settings, Optional.empty()).createJwt(issuer, subject, audience, expirySeconds, roles, List.of(), true);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -175,7 +175,7 @@ public class JwtVendorTest {
 
         Throwable exception = Assert.assertThrows(RuntimeException.class, () -> {
             try {
-                jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of(), false);
+                jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of(), true);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

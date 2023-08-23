@@ -140,7 +140,7 @@ public class JwtVendor {
             throw new Exception("Roles cannot be null");
         }
 
-        if (roleSecruityMode && backendRoles != null) {
+        if (!roleSecruityMode && backendRoles != null) {
             String listOfBackendRoles = String.join(",", backendRoles);
             jwtClaims.setProperty("br", listOfBackendRoles);
         }

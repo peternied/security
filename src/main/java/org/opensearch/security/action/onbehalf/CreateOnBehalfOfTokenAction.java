@@ -137,7 +137,7 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
 
                     final Boolean roleSecurityMode = Optional.ofNullable(requestBody.get("roleSecurityMode"))
                         .map(value -> (Boolean) value)
-                        .orElse(false); // Default to false if null
+                        .orElse(true); // Default to false if null
 
                     final String service = (String) requestBody.getOrDefault("service", "self-issued");
                     final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);

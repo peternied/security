@@ -375,6 +375,12 @@ public class DynamicConfigModelV7 extends DynamicConfigModel {
             }
         }
 
+        /*
+         * If the OnBehalfOf (OBO) authentication is configured:
+         * Add the OBO authbackend in to the auth domains
+         * Challenge: false - no need to iterate through the auth domains again when OBO authentication failed
+         * order: -1 - prioritize the OBO authentication when it gets enabled
+         */
         Settings oboSettings = getDynamicOnBehalfOfSettings();
         if (oboSettings.get("signing_key") != null && oboSettings.get("encryption_key") != null) {
             final AuthDomain _ad = new AuthDomain(

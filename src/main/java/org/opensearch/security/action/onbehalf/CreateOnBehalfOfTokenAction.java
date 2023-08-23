@@ -135,6 +135,10 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                         .map(value -> Math.min(value, OBO_MAX_EXPIRY_SECONDS)) // Max duration seconds are 600
                         .orElse(OBO_DEFAULT_EXPIRY_SECONDS); // Fallback to default
 
+                    final Boolean roleSecurityMode = Optional.ofNullable(requestBody.get("roleSecurityMode"))
+                        .map(value -> (Boolean) value)
+                        .orElse(false); // Default to false if null
+
                     final String service = (String) requestBody.getOrDefault("service", "self-issued");
                     final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
                     Set<String> mappedRoles = mapRoles(user, /*Do not include host based mappings*/ null);
@@ -148,7 +152,8 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                         service,
                         tokenDuration,
                         mappedRoles.stream().collect(Collectors.toList()),
-                        user.getRoles().stream().collect(Collectors.toList())
+                        user.getRoles().stream().collect(Collectors.toList()),
+                        roleSecurityMode
                     );
                     builder.field("authenticationToken", token);
                     builder.field("durationSeconds", tokenDuration);

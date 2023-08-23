@@ -1119,23 +1119,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         }
         return builder.build();
     }
-    // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
-
-    @Override
-    public List<Setting<?>> getExtensionSettings() {
-        List<Setting<?>> extensionSettings = new ArrayList<Setting<?>>();
-
-        extensionSettings.add(
-            Setting.boolSetting(
-                ConfigConstants.EXTENSIONS_BWC_PLUGIN_MODE,
-                ConfigConstants.EXTENSIONS_BWC_PLUGIN_MODE_DEFAULT,
-                Property.ExtensionScope,
-                Property.Final
-            )
-        );
-        return extensionSettings;
-    }
-    // CS-ENFORCE-SINGLE:
 
     @Override
     public List<Setting<?>> getSettings() {

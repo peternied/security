@@ -31,7 +31,6 @@ import org.apache.logging.log4j.Logger;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.ssl.util.ExceptionUtils;
-import org.opensearch.security.support.ConfigConstants;
 
 public class JwtVendor {
     private static final Logger logger = LogManager.getLogger(JwtVendor.class);
@@ -42,7 +41,6 @@ public class JwtVendor {
     private final JsonWebKey signingKey;
     private final JoseJwtProducer jwtProducer;
     private final LongSupplier timeProvider;
-    private final Boolean bwcModeEnabled;
     private final EncryptionDecryptionUtil encryptionDecryptionUtil;
 
     public JwtVendor(final Settings settings, final Optional<LongSupplier> timeProvider) {
@@ -64,12 +62,6 @@ public class JwtVendor {
         } else {
             this.timeProvider = () -> System.currentTimeMillis() / 1000;
         }
-        // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
-        this.bwcModeEnabled = settings.getAsBoolean(
-            ConfigConstants.EXTENSIONS_BWC_PLUGIN_MODE,
-            ConfigConstants.EXTENSIONS_BWC_PLUGIN_MODE_DEFAULT
-        );
-        // CS-ENFORCE-SINGLE
     }
 
     /*
@@ -114,7 +106,8 @@ public class JwtVendor {
         String audience,
         Integer expirySeconds,
         List<String> roles,
-        List<String> backendRoles
+        List<String> backendRoles,
+        Boolean roleSecruityMode
     ) throws Exception {
         final long nowAsMillis = timeProvider.getAsLong();
         final Instant nowAsInstant = Instant.ofEpochMilli(timeProvider.getAsLong());
@@ -147,7 +140,7 @@ public class JwtVendor {
             throw new Exception("Roles cannot be null");
         }
 
-        if (bwcModeEnabled && backendRoles != null) {
+        if (roleSecruityMode && backendRoles != null) {
             String listOfBackendRoles = String.join(",", backendRoles);
             jwtClaims.setProperty("br", listOfBackendRoles);
         }

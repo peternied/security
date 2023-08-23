@@ -608,7 +608,7 @@ public class BackendRegistry {
             for (final AuthDomain authDomain : restAuthDomains) {
                 final AuthenticationBackend authenticationBackend = authDomain.getBackend();
 
-                //Skip over the OnBehalfOfAuthenticator since it is not compatible for user impersonation
+                // Skip over the OnBehalfOfAuthenticator since it is not compatible for user impersonation
                 if (authDomain.getHttpAuthenticator() instanceof OnBehalfOfAuthenticator) {
                     continue;
                 }

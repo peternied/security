@@ -108,16 +108,6 @@ public final class AuthCredentials {
         this.securityRoles.addAll(securityRoles);
     }
 
-    private AuthCredentials(
-        final String username,
-        byte[] password,
-        Object nativeCredentials,
-        List<String> securityRoles,
-        String... backendRoles
-    ) {
-        this(username, null, null, backendRoles);
-    }
-
     private AuthCredentials(final String username, byte[] password, Object nativeCredentials, String... backendRoles) {
         super();
 

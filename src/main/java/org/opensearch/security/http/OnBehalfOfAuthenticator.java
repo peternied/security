@@ -198,6 +198,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             }
         }
 
+        // Return null for the authentication failure
         return null;
     }
 

@@ -41,8 +41,6 @@ import org.opensearch.threadpool.ThreadPool;
 
 import static org.opensearch.rest.RestRequest.Method.POST;
 import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
-import static org.opensearch.security.support.ConfigConstants.OBO_DEFAULT_EXPIRY_SECONDS;
-import static org.opensearch.security.support.ConfigConstants.OBO_MAX_EXPIRY_SECONDS;
 
 public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
 
@@ -58,6 +56,9 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
     private ConfigModel configModel;
 
     private DynamicConfigModel dcm;
+
+    public static final Integer OBO_DEFAULT_EXPIRY_SECONDS = 5 * 60;
+    public static final Integer OBO_MAX_EXPIRY_SECONDS = 10 * 60;
 
     @Subscribe
     public void onConfigModelChanged(ConfigModel configModel) {
@@ -128,15 +129,15 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                     final Map<String, Object> requestBody = request.contentOrSourceParamParser().map();
                     final String description = (String) requestBody.getOrDefault("description", null);
 
-                    final Integer tokenDuration = Optional.ofNullable(requestBody.get("duration"))
+                    final Integer tokenDuration = Optional.ofNullable(requestBody.get("durationSeconds"))
                         .map(value -> (String) value)
                         .map(Integer::parseInt)
-                        .map(value -> Math.min(value, OBO_MAX_EXPIRY_SECONDS)) // Max duration is 10 minutes
-                        .orElse(OBO_DEFAULT_EXPIRY_SECONDS); // Fallback to default of 5 minutes;
+                        .map(value -> Math.min(value, OBO_MAX_EXPIRY_SECONDS)) // Max duration seconds are 600
+                        .orElse(OBO_DEFAULT_EXPIRY_SECONDS); // Fallback to default
 
                     final String service = (String) requestBody.getOrDefault("service", "self-issued");
                     final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
-                    Set<String> mappedRoles = mapRoles(user, null);
+                    Set<String> mappedRoles = mapRoles(user, /*Do not include host based mappings*/ null);
 
                     builder.startObject();
                     builder.field("user", user.getName());
@@ -149,8 +150,8 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                         mappedRoles.stream().collect(Collectors.toList()),
                         user.getRoles().stream().collect(Collectors.toList())
                     );
-                    builder.field("onBehalfOfToken", token);
-                    builder.field("duration", tokenDuration);
+                    builder.field("authenticationToken", token);
+                    builder.field("durationSeconds", tokenDuration);
                     builder.endObject();
 
                     response = new BytesRestResponse(RestStatus.OK, builder);

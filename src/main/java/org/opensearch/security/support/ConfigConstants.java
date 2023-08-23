@@ -321,9 +321,6 @@ public class ConfigConstants {
     public static final String TENANCY_GLOBAL_TENANT_DEFAULT_NAME = "";
 
     // On-behalf-of endpoints settings
-    public static final Integer OBO_DEFAULT_EXPIRY_SECONDS = 5 * 60;
-    public static final Integer OBO_MAX_EXPIRY_SECONDS = 10 * 60;
-
     // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
     public static final String EXTENSIONS_BWC_PLUGIN_MODE = "bwcPluginMode";
     public static final boolean EXTENSIONS_BWC_PLUGIN_MODE_DEFAULT = false;

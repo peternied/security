@@ -147,8 +147,11 @@ public class OnBehalfOfJwtAuthenticationTest {
             TestRestClient.HttpResponse response = client.postJson(OBO_ENDPOINT_PREFIX, OBO_TOKEN_REASON);
             response.assertStatusCode(200);
             Map<String, Object> oboEndPointResponse = response.getBodyAs(Map.class);
-            assertThat(oboEndPointResponse, allOf(aMapWithSize(3), hasKey("user"), hasKey("onBehalfOfToken"), hasKey("duration")));
-            return oboEndPointResponse.get("onBehalfOfToken").toString();
+            assertThat(
+                oboEndPointResponse,
+                allOf(aMapWithSize(3), hasKey("user"), hasKey("authenticationToken"), hasKey("durationSeconds"))
+            );
+            return oboEndPointResponse.get("authenticationToken").toString();
         }
     }
 

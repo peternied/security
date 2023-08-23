@@ -258,6 +258,7 @@ public class SecurityRestFilter {
                 );
             }
         }
+
         return false;
     }
 

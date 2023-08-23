@@ -42,6 +42,8 @@ public class JwtVendor {
     private final JoseJwtProducer jwtProducer;
     private final LongSupplier timeProvider;
     private final EncryptionDecryptionUtil encryptionDecryptionUtil;
+    private final Integer defaultExpirySeconds = 300;
+    private final Integer maxExpirySeconds = 600;
 
     public JwtVendor(final Settings settings, final Optional<LongSupplier> timeProvider) {
         JoseJwtProducer jwtProducer = new JoseJwtProducer();
@@ -126,7 +128,11 @@ public class JwtVendor {
 
         jwtClaims.setNotBefore(nowAsMillis);
 
-        expirySeconds = (expirySeconds == null) ? 300 : expirySeconds;
+        if (expirySeconds > maxExpirySeconds) {
+            throw new Exception("The provided expiration time exceeds the maximum allowed duration of " + maxExpirySeconds + " seconds");
+        }
+
+        expirySeconds = (expirySeconds == null) ? defaultExpirySeconds : Math.min(expirySeconds, maxExpirySeconds);
         if (expirySeconds <= 0) {
             throw new Exception("The expiration time should be a positive integer");
         }

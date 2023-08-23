@@ -46,51 +46,45 @@ public class OnBehalfOfAuthenticatorTest {
     final static SecretKey secretKey = Keys.hmacShaKeyFor(signingKeyB64Encoded.getBytes(StandardCharsets.UTF_8));
 
     @Test
-    public void testNoKey() throws Exception {
-
-        try {
-            final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+    public void testNoKey() {
+        Exception exception = Assert.assertThrows(
+            RuntimeException.class,
+            () -> extractCredentialsFromJwtHeader(
                 null,
                 claimsEncryptionKey,
                 Jwts.builder().setIssuer(clusterName).setSubject("Leonard McCoy"),
                 false
-            );
-            Assert.fail("Expected a RuntimeException");
-        } catch (RuntimeException e) {
-            Assert.assertTrue(e.getMessage().contains("Unable to find on behalf of authenticator signing key"));
-        }
+            )
+        );
+        Assert.assertTrue(exception.getMessage().contains("Unable to find on behalf of authenticator signing key"));
     }
 
     @Test
-    public void testEmptyKey() throws Exception {
-
-        try {
-            final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+    public void testEmptyKey() {
+        Exception exception = Assert.assertThrows(
+            RuntimeException.class,
+            () -> extractCredentialsFromJwtHeader(
                 null,
                 claimsEncryptionKey,
                 Jwts.builder().setIssuer(clusterName).setSubject("Leonard McCoy"),
                 false
-            );
-            Assert.fail("Expected a RuntimeException");
-        } catch (RuntimeException e) {
-            Assert.assertTrue(e.getMessage().contains("Unable to find on behalf of authenticator signing key"));
-        }
+            )
+        );
+        Assert.assertTrue(exception.getMessage().contains("Unable to find on behalf of authenticator signing key"));
     }
 
     @Test
-    public void testBadKey() throws Exception {
-
-        try {
-            final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+    public void testBadKey() {
+        Exception exception = Assert.assertThrows(
+            RuntimeException.class,
+            () -> extractCredentialsFromJwtHeader(
                 BaseEncoding.base64().encode(new byte[] { 1, 3, 3, 4, 3, 6, 7, 8, 3, 10 }),
                 claimsEncryptionKey,
                 Jwts.builder().setIssuer(clusterName).setSubject("Leonard McCoy"),
                 false
-            );
-            Assert.fail("Expected a WeakKeyException");
-        } catch (RuntimeException e) {
-            Assert.assertTrue(e.getMessage().contains("The specified key byte array is 80 bits"));
-        }
+            )
+        );
+        Assert.assertTrue(exception.getMessage().contains("The specified key byte array is 80 bits"));
     }
 
     @Test

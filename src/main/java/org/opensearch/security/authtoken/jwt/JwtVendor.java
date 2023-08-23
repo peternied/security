@@ -116,8 +116,8 @@ public class JwtVendor {
         List<String> roles,
         List<String> backendRoles
     ) throws Exception {
-        long timeMillis = timeProvider.getAsLong();
-        Instant now = Instant.ofEpochMilli(timeProvider.getAsLong());
+        final long nowAsMillis = timeProvider.getAsLong();
+        final Instant nowAsInstant = Instant.ofEpochMilli(timeProvider.getAsLong());
 
         jwtProducer.setSignatureProvider(JwsUtils.getSignatureProvider(signingKey));
         JwtClaims jwtClaims = new JwtClaims();
@@ -125,13 +125,13 @@ public class JwtVendor {
 
         jwtClaims.setIssuer(issuer);
 
-        jwtClaims.setIssuedAt(timeMillis);
+        jwtClaims.setIssuedAt(nowAsMillis);
 
         jwtClaims.setSubject(subject);
 
         jwtClaims.setAudience(audience);
 
-        jwtClaims.setNotBefore(timeMillis);
+        jwtClaims.setNotBefore(nowAsMillis);
 
         expirySeconds = (expirySeconds == null) ? 300 : expirySeconds;
         if (expirySeconds <= 0) {

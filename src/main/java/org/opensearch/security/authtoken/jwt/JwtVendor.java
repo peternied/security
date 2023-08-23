@@ -89,7 +89,9 @@ public class JwtVendor {
             Settings jwkSettings = settings.getAsSettings("jwt").getAsSettings("key");
 
             if (jwkSettings.isEmpty()) {
-                throw new Exception("Settings for key is missing. Please specify at least the option signing_key with a shared secret.");
+                throw new Exception(
+                    "Settings for signing key is missing. Please specify at least the option signing_key with a shared secret."
+                );
             }
 
             JsonWebKey jwk = new JsonWebKey();

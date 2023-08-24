@@ -58,6 +58,7 @@ import org.opensearch.security.auth.HTTPAuthenticator;
 import org.opensearch.security.auth.blocking.ClientBlockRegistry;
 import org.opensearch.security.auth.internal.InternalAuthenticationBackend;
 import org.opensearch.security.auth.internal.NoOpAuthenticationBackend;
+import org.opensearch.security.configuration.ClusterInfoHolder;
 import org.opensearch.security.http.OnBehalfOfAuthenticator;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7.Authc;
@@ -82,21 +83,21 @@ public class DynamicConfigModelV7 extends DynamicConfigModel {
     private Multimap<String, AuthFailureListener> authBackendFailureListeners;
     private List<ClientBlockRegistry<InetAddress>> ipClientBlockRegistries;
     private Multimap<String, ClientBlockRegistry<String>> authBackendClientBlockRegistries;
-    private String clusterName;
+    private final ClusterInfoHolder cih;
 
     public DynamicConfigModelV7(
         ConfigV7 config,
         Settings opensearchSettings,
         Path configPath,
         InternalAuthenticationBackend iab,
-        String clusterName
+        ClusterInfoHolder cih
     ) {
         super();
         this.config = config;
         this.opensearchSettings = opensearchSettings;
         this.configPath = configPath;
         this.iab = iab;
-        this.clusterName = clusterName;
+        this.cih = cih;
         buildAAA();
     }
 
@@ -385,7 +386,7 @@ public class DynamicConfigModelV7 extends DynamicConfigModel {
         if (oboSettings.get("signing_key") != null && oboSettings.get("encryption_key") != null) {
             final AuthDomain _ad = new AuthDomain(
                 new NoOpAuthenticationBackend(Settings.EMPTY, null),
-                new OnBehalfOfAuthenticator(getDynamicOnBehalfOfSettings(), this.clusterName),
+                new OnBehalfOfAuthenticator(getDynamicOnBehalfOfSettings(), this.cih.getClusterName()),
                 false,
                 -1
             );

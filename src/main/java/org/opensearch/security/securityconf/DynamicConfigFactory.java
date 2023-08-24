@@ -81,7 +81,6 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
     private static SecurityDynamicConfiguration<TenantV7> staticTenants = SecurityDynamicConfiguration.empty();
     private static final WhitelistingSettings defaultWhitelistingSettings = new WhitelistingSettings();
     private static final AllowlistingSettings defaultAllowlistingSettings = new AllowlistingSettings();
-    private final String clusterName;
 
     static void resetStatics() {
         staticRoles = SecurityDynamicConfiguration.empty();
@@ -129,6 +128,7 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
     private final Settings opensearchSettings;
     private final Path configPath;
     private final InternalAuthenticationBackend iab = new InternalAuthenticationBackend();
+    private final ClusterInfoHolder cih;
 
     SecurityDynamicConfiguration<?> config;
 
@@ -138,14 +138,13 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
         final Path configPath,
         Client client,
         ThreadPool threadPool,
-        ClusterInfoHolder cih,
-        String clusterName
+        ClusterInfoHolder cih
     ) {
         super();
         this.cr = cr;
         this.opensearchSettings = opensearchSettings;
         this.configPath = configPath;
-        this.clusterName = clusterName;
+        this.cih = cih;
 
         if (opensearchSettings.getAsBoolean(ConfigConstants.SECURITY_UNSUPPORTED_LOAD_STATIC_RESOURCES, true)) {
             try {
@@ -274,7 +273,7 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
             );
 
             // rebuild v7 Models
-            dcm = new DynamicConfigModelV7(getConfigV7(config), opensearchSettings, configPath, iab, this.clusterName);
+            dcm = new DynamicConfigModelV7(getConfigV7(config), opensearchSettings, configPath, iab, this.cih);
             ium = new InternalUsersModelV7(
                 (SecurityDynamicConfiguration<InternalUserV7>) internalusers,
                 (SecurityDynamicConfiguration<RoleV7>) roles,

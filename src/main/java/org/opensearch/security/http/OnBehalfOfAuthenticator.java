@@ -174,7 +174,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             }
 
             final String issuer = claims.getIssuer();
-            if (!issuer.equals(clusterName)) {
+            if (!clusterName.equals(issuer)) {
                 log.error("The issuer of this OBO does not match the current cluster identifier");
                 return null;
             }

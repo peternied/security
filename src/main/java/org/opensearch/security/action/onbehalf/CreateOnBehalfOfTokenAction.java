@@ -60,6 +60,8 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
     public static final Integer OBO_DEFAULT_EXPIRY_SECONDS = 5 * 60;
     public static final Integer OBO_MAX_EXPIRY_SECONDS = 10 * 60;
 
+    public static final String DEFAULT_SERVICE = "self-issued";
+
     @Subscribe
     public void onConfigModelChanged(ConfigModel configModel) {
         this.configModel = configModel;
@@ -139,7 +141,7 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                         .map(value -> (Boolean) value)
                         .orElse(true); // Default to false if null
 
-                    final String service = (String) requestBody.getOrDefault("service", "self-issued");
+                    final String service = (String) requestBody.getOrDefault("service", DEFAULT_SERVICE);
                     final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
                     Set<String> mappedRoles = mapRoles(user, /*Do not include host based mappings*/ null);
 

@@ -959,7 +959,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         // Register opensearch dynamic settings
         transportPassiveAuthSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
 
-        final ClusterInfoHolder cih = new ClusterInfoHolder(this.cs.getNodeName());
+        final ClusterInfoHolder cih = new ClusterInfoHolder(this.cs.getClusterName().value());
         this.cs.addListener(cih);
         this.salt = Salt.from(settings);
 

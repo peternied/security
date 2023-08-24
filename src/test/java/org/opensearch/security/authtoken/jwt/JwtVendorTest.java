@@ -47,7 +47,7 @@ public class JwtVendorTest {
             }
         });
         Assert.assertEquals(
-            "java.lang.Exception: Settings for key is missing. Please specify at least the option signing_key with a shared secret.",
+            "java.lang.Exception: Settings for signing key is missing. Please specify at least the option signing_key with a shared secret.",
             exception.getMessage()
         );
     }

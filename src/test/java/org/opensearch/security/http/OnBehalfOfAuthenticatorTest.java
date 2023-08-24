@@ -34,6 +34,8 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.FakeRestRequest;
 
+import static org.hamcrest.Matchers.equalTo;
+
 public class OnBehalfOfAuthenticatorTest {
     final static String clusterName = "cluster_0";
     final static String enableOBO = "true";
@@ -147,6 +149,10 @@ public class OnBehalfOfAuthenticatorTest {
 
     @Test
     public void testBearer() throws Exception {
+        Map<String, String> expectedAttributes = new HashMap<>();
+        expectedAttributes.put("attr.jwt.iss", "cluster_0");
+        expectedAttributes.put("attr.jwt.sub", "Leonard McCoy");
+        expectedAttributes.put("attr.jwt.aud", "ext_0");
 
         String jwsToken = Jwts.builder()
             .setIssuer(clusterName)
@@ -165,7 +171,7 @@ public class OnBehalfOfAuthenticatorTest {
         Assert.assertEquals("Leonard McCoy", credentials.getUsername());
         Assert.assertEquals(0, credentials.getSecurityRoles().size());
         Assert.assertEquals(0, credentials.getBackendRoles().size());
-        Assert.assertEquals(3, credentials.getAttributes().size());
+        Assert.assertThat(credentials.getAttributes(), equalTo(expectedAttributes));
     }
 
     @Test

@@ -118,7 +118,7 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
                         channel.sendResponse(
                             new BytesRestResponse(
                                 RestStatus.SERVICE_UNAVAILABLE,
-                                "on_behalf_of is either disabled or the configuration is invalid"
+                                "The OnBehalfOf token generating API has been disabled, see {link to doc} for more information on this feature." /* TODO: Update the link to the documentation website */
                             )
                         );
                         return;

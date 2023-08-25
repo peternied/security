@@ -111,7 +111,7 @@ public class JwtVendor {
         Integer expirySeconds,
         List<String> roles,
         List<String> backendRoles,
-        Boolean roleSecurityMode
+        boolean roleSecurityMode
     ) throws Exception {
         final long nowAsMillis = timeProvider.getAsLong();
         final Instant nowAsInstant = Instant.ofEpochMilli(timeProvider.getAsLong());

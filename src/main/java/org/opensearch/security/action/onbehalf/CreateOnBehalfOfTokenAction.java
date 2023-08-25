@@ -143,7 +143,7 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
 
                     final String service = (String) requestBody.getOrDefault("service", DEFAULT_SERVICE);
                     final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
-                    Set<String> mappedRoles = mapRoles(user, /*Do not include host based mappings*/ null);
+                    Set<String> mappedRoles = mapRoles(user);
 
                     builder.startObject();
                     builder.field("user", user.getName());
@@ -173,8 +173,8 @@ public class CreateOnBehalfOfTokenAction extends BaseRestHandler {
         };
     }
 
-    public Set<String> mapRoles(final User user, final TransportAddress caller) {
-        return this.configModel.mapSecurityRoles(user, caller);
+    private Set<String> mapRoles(final User user) {
+        return this.configModel.mapSecurityRoles(user, null);
     }
 
 }

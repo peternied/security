@@ -482,7 +482,7 @@ public class ConfigV7 {
 
     public static class OnBehalfOf {
         @JsonProperty("enabled")
-        private Boolean oboEnabled;
+        private Boolean oboEnabled = Boolean.TRUE;
         @JsonProperty("signing_key")
         private String signingKey;
         @JsonProperty("encryption_key")
@@ -498,7 +498,7 @@ public class ConfigV7 {
         }
 
         public Boolean getOboEnabled() {
-            return oboEnabled == null ? Boolean.TRUE : oboEnabled;
+            return oboEnabled;
         }
 
         public void setOboEnabled(Boolean oboEnabled) {

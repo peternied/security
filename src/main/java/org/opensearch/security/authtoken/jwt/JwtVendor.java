@@ -111,7 +111,7 @@ public class JwtVendor {
         Integer expirySeconds,
         List<String> roles,
         List<String> backendRoles,
-        Boolean roleSecruityMode
+        Boolean roleSecurityMode
     ) throws Exception {
         final long nowAsMillis = timeProvider.getAsLong();
         final Instant nowAsInstant = Instant.ofEpochMilli(timeProvider.getAsLong());
@@ -148,7 +148,7 @@ public class JwtVendor {
             throw new Exception("Roles cannot be null");
         }
 
-        if (!roleSecruityMode && backendRoles != null) {
+        if (!roleSecurityMode && backendRoles != null) {
             String listOfBackendRoles = String.join(",", backendRoles);
             jwtClaims.setProperty("br", listOfBackendRoles);
         }

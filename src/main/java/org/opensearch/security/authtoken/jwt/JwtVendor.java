@@ -28,9 +28,15 @@ import org.apache.cxf.rs.security.jose.jwt.JwtToken;
 import org.apache.cxf.rs.security.jose.jwt.JwtUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.nimbusds.jose.JWSObjectJSON;
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.OctetSequenceKey.Builder;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.JWTClaimsSet.Builder;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.ssl.util.ExceptionUtils;
@@ -42,20 +48,17 @@ public class JwtVendor {
 
     private final String claimsEncryptionKey;
     private final JsonWebKey signingKey;
-    private final JoseJwtProducer jwtProducer;
     private final LongSupplier timeProvider;
     private final EncryptionDecryptionUtil encryptionDecryptionUtil;
     private final Integer defaultExpirySeconds = 300;
     private final Integer maxExpirySeconds = 600;
 
     public JwtVendor(final Settings settings, final Optional<LongSupplier> timeProvider) {
-        JoseJwtProducer jwtProducer = new JoseJwtProducer();
         try {
             this.signingKey = createJwkFromSettings(settings);
         } catch (Exception e) {
             throw ExceptionUtils.createJwkCreationException(e);
         }
-        this.jwtProducer = jwtProducer;
         if (settings.get("encryption_key") == null) {
             throw new IllegalArgumentException("encryption_key cannot be null");
         } else {
@@ -89,7 +92,9 @@ public class JwtVendor {
 
             final JWK jwk2 = new OctetSequenceKey.Builder(signingKey.getBytes())
                 .keyID("OnBehalfOfKey")
+                .keyUse(KeyUse.SIGNATURE)
                 .build();
+
 
             return jwk;
         } else {
@@ -123,11 +128,19 @@ public class JwtVendor {
         final long nowAsMillis = timeProvider.getAsLong();
         final Instant nowAsInstant = Instant.ofEpochMilli(timeProvider.getAsLong());
 
-        jwtProducer.setSignatureProvider(JwsUtils.getSignatureProvider(signingKey));
-        JwtClaims jwtClaims = new JwtClaims();
-        JwtToken jwt = new JwtToken(jwtClaims);
+        JWSObjectJSON jwsObjectJSON = new JWSObjectJSON(null);
 
-        jwtClaims.setIssuer(issuer);
+        Payload payload = new Payload("abc");
+        payload.
+
+        final JWTClaimsSet claims = JWTClaimsSet.Builder()
+            .subject("alice")
+            .issuer(issuer)
+            .
+            .build();
+
+
+        jwtClaims.setIssuer();
 
         jwtClaims.setIssuedAt(nowAsMillis);
 

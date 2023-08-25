@@ -28,6 +28,9 @@ import org.apache.cxf.rs.security.jose.jwt.JwtToken;
 import org.apache.cxf.rs.security.jose.jwt.JwtUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.OctetSequenceKey.Builder;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.ssl.util.ExceptionUtils;
@@ -83,6 +86,10 @@ public class JwtVendor {
             jwk.setAlgorithm("HS512");
             jwk.setPublicKeyUse(PublicKeyUse.SIGN);
             jwk.setProperty("k", signingKey);
+
+            final JWK jwk2 = new OctetSequenceKey.Builder(signingKey.getBytes())
+                .keyID("OnBehalfOfKey")
+                .build();
 
             return jwk;
         } else {

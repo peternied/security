@@ -14,6 +14,8 @@ package org.opensearch.security.dlic.rest.api;
 // CS-SUPPRESS-SINGLE: RegexpSingleline https://github.com/opensearch-project/OpenSearch/issues/3663
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -190,7 +192,7 @@ public class MigrateApiAction extends AbstractApiAction {
                                 @Override
                                 public void onResponse(CreateIndexResponse response) {
                                     final List<SecurityDynamicConfiguration<?>> dynamicConfigurations = builder.build();
-                                    final ImmutableList.Builder<String> cTypes = ImmutableList.builderWithExpectedSize(
+                                    final ImmutableMap.Builder<CType, Long> cTypes = ImmutableMap.builderWithExpectedSize(
                                         dynamicConfigurations.size()
                                     );
                                     final BulkRequestBuilder br = client.prepareBulk(securityApiDependencies.securityIndexName());
@@ -204,7 +206,7 @@ public class MigrateApiAction extends AbstractApiAction {
                                                 false
                                             );
                                             br.add(new IndexRequest().id(id).source(id, xContent));
-                                            cTypes.add(id);
+                                            cTypes.put(dynamicConfiguration.getCType(), Long.valueOf(dynamicConfiguration.getSeqNo()));
                                         }
                                     } catch (final IOException e1) {
                                         LOGGER.error("Unable to create bulk request " + e1, e1);
@@ -212,38 +214,28 @@ public class MigrateApiAction extends AbstractApiAction {
                                         return;
                                     }
 
-                                    br.execute(
-                                        new ConfigUpdatingActionListener(
-                                            cTypes.build().toArray(new String[0]),
-                                            client,
-                                            new ActionListener<BulkResponse>() {
+                                    br.execute(new ConfigUpdatingActionListener(cTypes.build(), client, new ActionListener<BulkResponse>() {
 
-                                                @Override
-                                                public void onResponse(BulkResponse response) {
-                                                    if (response.hasFailures()) {
-                                                        LOGGER.error(
-                                                            "Unable to upload migrated configuration because of "
-                                                                + response.buildFailureMessage()
-                                                        );
-                                                        internalSeverError(
-                                                            channel,
-                                                            "Unable to upload migrated configuration (bulk index failed)."
-                                                        );
-                                                    } else {
-                                                        LOGGER.debug("Migration completed");
-                                                        ok(channel, "Migration completed.");
-                                                    }
-
-                                                }
-
-                                                @Override
-                                                public void onFailure(Exception e) {
-                                                    LOGGER.error("Unable to upload migrated configuration because of " + e, e);
-                                                    internalSeverError(channel, "Unable to upload migrated configuration.");
-                                                }
+                                        @Override
+                                        public void onResponse(BulkResponse response) {
+                                            if (response.hasFailures()) {
+                                                LOGGER.error(
+                                                    "Unable to upload migrated configuration because of " + response.buildFailureMessage()
+                                                );
+                                                internalSeverError(channel, "Unable to upload migrated configuration (bulk index failed).");
+                                            } else {
+                                                LOGGER.debug("Migration completed");
+                                                ok(channel, "Migration completed.");
                                             }
-                                        )
-                                    );
+
+                                        }
+
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            LOGGER.error("Unable to upload migrated configuration because of " + e, e);
+                                            internalSeverError(channel, "Unable to upload migrated configuration.");
+                                        }
+                                    }));
 
                                 }
 

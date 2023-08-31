@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -103,10 +102,7 @@ public class UserService {
      * @return configuration loaded with given CType data
      */
     protected static final SecurityDynamicConfiguration<?> load(final CType config, boolean logComplianceEvent) {
-        SecurityDynamicConfiguration<?> loaded = configurationRepository.getConfigurationsFromIndex(
-            Collections.singleton(config),
-            logComplianceEvent
-        ).get(config).deepClone();
+        SecurityDynamicConfiguration<?> loaded = configurationRepository.getConfigurationFromIndex(config, logComplianceEvent).deepClone();
         return DynamicConfigFactory.addStatics(loaded);
     }
 

@@ -65,7 +65,7 @@ public class FlushCacheApiAction extends AbstractApiAction {
                 Method.DELETE,
                 (channel, request, client) -> client.execute(
                     ConfigUpdateAction.INSTANCE,
-                    new ConfigUpdateRequest(CType.lcStringValues().toArray(new String[0])),
+                    new ConfigUpdateRequest(CType.values(), null),
                     new ActionListener<>() {
 
                         @Override

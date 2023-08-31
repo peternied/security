@@ -131,8 +131,7 @@ public class ValidateApiAction extends AbstractApiAction {
 
     private SecurityDynamicConfiguration<?> load(final CType config, boolean logComplianceEvent, boolean acceptInvalid) {
         SecurityDynamicConfiguration<?> loaded = securityApiDependencies.configurationRepository()
-            .getConfigurationsFromIndex(Collections.singleton(config), logComplianceEvent, acceptInvalid)
-            .get(config)
+            .getConfigurationFromIndex(config, logComplianceEvent, acceptInvalid)
             .deepClone();
         return DynamicConfigFactory.addStatics(loaded);
     }

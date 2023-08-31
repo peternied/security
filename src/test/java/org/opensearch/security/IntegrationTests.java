@@ -49,6 +49,7 @@ import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
 import org.opensearch.security.http.HTTPClientCertAuthenticator;
+import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.DynamicSecurityConfig;
@@ -308,7 +309,10 @@ public class IntegrationTests extends SingleClusterTest {
 
             ConfigUpdateResponse cur = tc.execute(
                 ConfigUpdateAction.INSTANCE,
-                new ConfigUpdateRequest(new String[] { "config", "roles", "rolesmapping", "internalusers", "actiongroups" })
+                new ConfigUpdateRequest(
+                    new CType[] { CType.CONFIG, CType.ROLES, CType.ROLESMAPPING, CType.INTERNALUSERS, CType.ACTIONGROUPS },
+                    null
+                )
             ).actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
         }
@@ -423,7 +427,7 @@ public class IntegrationTests extends SingleClusterTest {
                     .source("config", FileHelper.readYamlContent("config_multirolespan.yml"))
             ).actionGet();
 
-            ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new String[] { "config" }))
+            ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new CType[] { CType.CONFIG }, null))
                 .actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
         }

@@ -43,8 +43,6 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.auth.BackendRegistry;
 import org.opensearch.security.configuration.ConfigurationRepository;
-import org.opensearch.security.securityconf.DynamicConfigFactory;
-import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportRequest;
 import org.opensearch.transport.TransportService;
@@ -58,7 +56,6 @@ public class TransportConfigUpdateAction extends TransportNodesAction<
     protected Logger logger = LogManager.getLogger(getClass());
     private final Provider<BackendRegistry> backendRegistry;
     private final ConfigurationRepository configurationRepository;
-    private DynamicConfigFactory dynamicConfigFactory;
 
     @Inject
     public TransportConfigUpdateAction(
@@ -68,8 +65,7 @@ public class TransportConfigUpdateAction extends TransportNodesAction<
         final TransportService transportService,
         final ConfigurationRepository configurationRepository,
         final ActionFilters actionFilters,
-        Provider<BackendRegistry> backendRegistry,
-        DynamicConfigFactory dynamicConfigFactory
+        Provider<BackendRegistry> backendRegistry
     ) {
         super(
             ConfigUpdateAction.NAME,
@@ -85,7 +81,6 @@ public class TransportConfigUpdateAction extends TransportNodesAction<
 
         this.configurationRepository = configurationRepository;
         this.backendRegistry = backendRegistry;
-        this.dynamicConfigFactory = dynamicConfigFactory;
     }
 
     public static class NodeConfigUpdateRequest extends TransportRequest {
@@ -125,9 +120,9 @@ public class TransportConfigUpdateAction extends TransportNodesAction<
 
     @Override
     protected ConfigUpdateNodeResponse nodeOperation(final NodeConfigUpdateRequest request) {
-        configurationRepository.reloadConfiguration(CType.fromStringValues((request.request.getConfigTypes())));
+        configurationRepository.reloadConfiguration(request.request);
         backendRegistry.get().invalidateCache();
-        return new ConfigUpdateNodeResponse(clusterService.localNode(), request.request.getConfigTypes(), null);
+        return new ConfigUpdateNodeResponse(clusterService.localNode(), new String[] {}, null);
     }
 
     @Override

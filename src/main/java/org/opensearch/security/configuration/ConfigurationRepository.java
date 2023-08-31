@@ -30,17 +30,17 @@ import java.io.File;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -66,6 +66,7 @@ import org.opensearch.core.common.Strings;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
@@ -218,7 +219,7 @@ public class ConfigurationRepository {
                 while (!dynamicConfigFactory.isInitialized()) {
                     try {
                         LOGGER.debug("Try to load config ...");
-                        reloadConfiguration(Arrays.asList(CType.values()));
+                        reloadConfiguration(new ConfigUpdateRequest(CType.values(), null));
                         break;
                     } catch (Exception e) {
                         LOGGER.debug("Unable to load configuration due to {}", String.valueOf(ExceptionUtils.getRootCause(e)));
@@ -372,11 +373,11 @@ public class ConfigurationRepository {
 
     private final Lock LOCK = new ReentrantLock();
 
-    public void reloadConfiguration(Collection<CType> configTypes) throws ConfigUpdateAlreadyInProgressException {
+    public void reloadConfiguration(final ConfigUpdateRequest updateRequest) throws ConfigUpdateAlreadyInProgressException {
         try {
             if (LOCK.tryLock(60, TimeUnit.SECONDS)) {
                 try {
-                    reloadConfiguration0(configTypes, this.acceptInvalid);
+                    reloadConfiguration0(updateRequest, this.acceptInvalid);
                 } finally {
                     LOCK.unlock();
                 }
@@ -389,8 +390,8 @@ public class ConfigurationRepository {
         }
     }
 
-    private void reloadConfiguration0(Collection<CType> configTypes, boolean acceptInvalid) {
-        final Map<CType, SecurityDynamicConfiguration<?>> loaded = getConfigurationsFromIndex(configTypes, false, acceptInvalid);
+    private void reloadConfiguration0(final ConfigUpdateRequest updateRequest, boolean acceptInvalid) {
+        final Map<CType, SecurityDynamicConfiguration<?>> loaded = getConfigurationsFromIndex(updateRequest, false, acceptInvalid);
         configCache.putAll(loaded);
         notifyAboutChanges(loaded);
     }
@@ -417,21 +418,25 @@ public class ConfigurationRepository {
      * @param logComplianceEvent
      * @return
      */
-    public Map<CType, SecurityDynamicConfiguration<?>> getConfigurationsFromIndex(
-        Collection<CType> configTypes,
-        boolean logComplianceEvent
-    ) {
-        return getConfigurationsFromIndex(configTypes, logComplianceEvent, this.acceptInvalid);
+    public SecurityDynamicConfiguration<?> getConfigurationFromIndex(CType configType, boolean logComplianceEvent) {
+        return getConfigurationFromIndex(configType, logComplianceEvent, this.acceptInvalid);
+    }
+
+    public SecurityDynamicConfiguration<?> getConfigurationFromIndex(CType configType, boolean logComplianceEvent, boolean acceptInvalid) {
+        final ConfigUpdateRequest updateRequest = new ConfigUpdateRequest(new CType[] { configType }, null);
+        return getConfigurationsFromIndex(updateRequest, logComplianceEvent, acceptInvalid).get(configType);
     }
 
     public Map<CType, SecurityDynamicConfiguration<?>> getConfigurationsFromIndex(
-        Collection<CType> configTypes,
-        boolean logComplianceEvent,
-        boolean acceptInvalid
+        final ConfigUpdateRequest updateRequest,
+        final boolean logComplianceEvent,
+        final boolean acceptInvalid
     ) {
 
         final ThreadContext threadContext = threadPool.getThreadContext();
         final Map<CType, SecurityDynamicConfiguration<?>> retVal = new HashMap<>();
+        final Map<CType, Long> typeAndSequenceIdMap = updateRequest.getTypeAndSequenceIdMap();
+        final CType[] configTypes = typeAndSequenceIdMap.keySet().toArray(new CType[0]);
 
         try (StoredContext ctx = threadContext.stashContext()) {
             threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
@@ -445,25 +450,28 @@ public class ConfigurationRepository {
                 } else {
                     LOGGER.debug("security index exists and was created with ES 7 (new layout)");
                 }
-                retVal.putAll(
-                    validate(cl.load(configTypes.toArray(new CType[0]), 10, TimeUnit.SECONDS, acceptInvalid), configTypes.size())
-                );
+                retVal.putAll(validate(cl.load(configTypes, 10, TimeUnit.SECONDS, acceptInvalid), typeAndSequenceIdMap));
 
             } else {
                 // wait (and use new layout)
                 LOGGER.debug("security index not exists (yet)");
-                retVal.putAll(
-                    validate(cl.load(configTypes.toArray(new CType[0]), 10, TimeUnit.SECONDS, acceptInvalid), configTypes.size())
-                );
+                retVal.putAll(validate(cl.load(configTypes, 10, TimeUnit.SECONDS, acceptInvalid), typeAndSequenceIdMap));
             }
 
         } catch (Exception e) {
             throw new OpenSearchException(e);
         }
 
+        // TODO BEFORE-MERGE: need to make sure this is unit tested/validated
         if (logComplianceEvent && auditLog.getComplianceConfig().isEnabled()) {
-            CType configurationType = configTypes.iterator().next();
-            Map<String, String> fields = new HashMap<String, String>();
+            if (typeAndSequenceIdMap.size() != 1) {
+                throw new RuntimeException("Unexpected configuration log event that is missing critical details");
+            }
+            final CType configurationType = typeAndSequenceIdMap.keySet()
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Loaded configuation without expected CType!"));
+            final Map<String, String> fields = new HashMap<String, String>();
             fields.put(configurationType.toLCString(), Strings.toString(MediaTypeRegistry.JSON, retVal.get(configurationType)));
             auditLog.logDocumentRead(this.securityIndex, configurationType.toLCString(), null, fields);
         }
@@ -471,11 +479,34 @@ public class ConfigurationRepository {
         return retVal;
     }
 
-    private Map<CType, SecurityDynamicConfiguration<?>> validate(Map<CType, SecurityDynamicConfiguration<?>> conf, int expectedSize)
-        throws InvalidConfigException {
+    private Map<CType, SecurityDynamicConfiguration<?>> validate(
+        Map<CType, SecurityDynamicConfiguration<?>> conf,
+        Map<CType, Long> expectedSequences
+    ) throws InvalidConfigException {
 
-        if (conf == null || conf.size() != expectedSize) {
+        if (conf == null || conf.size() != expectedSequences.size()) {
             throw new InvalidConfigException("Retrieved only partial configuration");
+        }
+
+        // TODO BEFORE-MERGE: Need unit tests
+        final List<String> configurationSeqIssues = expectedSequences.entrySet().stream().map(kvp -> {
+            if (kvp.getValue() != null) {
+                final SecurityDynamicConfiguration<?> configEntry = conf.get(kvp.getKey());
+                if (configEntry.getSeqNo() > kvp.getValue()) {
+                    return "Configuration "
+                        + kvp.getKey()
+                        + ", sequence number ("
+                        + configEntry.getSeqNo()
+                        + ") was lower than expected ("
+                        + kvp.getValue()
+                        + ")";
+                }
+            }
+            return null;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+
+        if (!configurationSeqIssues.isEmpty()) {
+            throw new InvalidConfigException(configurationSeqIssues.stream().collect(Collectors.joining("\n")));
         }
 
         return conf;

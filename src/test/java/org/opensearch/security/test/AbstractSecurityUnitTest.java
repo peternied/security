@@ -278,10 +278,7 @@ public abstract class AbstractSecurityUnitTest extends RandomizedTest {
                 tc.index(ir).actionGet();
             }
 
-            ConfigUpdateResponse cur = tc.execute(
-                ConfigUpdateAction.INSTANCE,
-                new ConfigUpdateRequest(CType.lcStringValues().toArray(new String[0]))
-            ).actionGet();
+            ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(CType.values(), null)).actionGet();
             Assert.assertFalse(cur.failures().toString(), cur.hasFailures());
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
 

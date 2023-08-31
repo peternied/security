@@ -44,6 +44,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
+import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.DynamicSecurityConfig;
@@ -287,7 +288,7 @@ public class HttpIntegrationTests extends SingleClusterTest {
                     .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                     .source("roles", FileHelper.readYamlContent("roles_deny.yml"))
             ).actionGet();
-            ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new String[] { "roles" }))
+            ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new CType[] { CType.ROLES }, null))
                 .actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
         }
@@ -303,7 +304,7 @@ public class HttpIntegrationTests extends SingleClusterTest {
                     .setRefreshPolicy(RefreshPolicy.IMMEDIATE)
                     .source("roles", FileHelper.readYamlContent("roles.yml"))
             ).actionGet();
-            ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new String[] { "roles" }))
+            ConfigUpdateResponse cur = tc.execute(ConfigUpdateAction.INSTANCE, new ConfigUpdateRequest(new CType[] { CType.ROLES }, null))
                 .actionGet();
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
         }
@@ -495,7 +496,10 @@ public class HttpIntegrationTests extends SingleClusterTest {
             ).actionGet();
             ConfigUpdateResponse cur = tc.execute(
                 ConfigUpdateAction.INSTANCE,
-                new ConfigUpdateRequest(new String[] { "config", "roles", "rolesmapping", "internalusers", "actiongroups" })
+                new ConfigUpdateRequest(
+                    new CType[] { CType.CONFIG, CType.ROLES, CType.ROLESMAPPING, CType.INTERNALUSERS, CType.ACTIONGROUPS },
+                    null
+                )
             ).actionGet();
             Assert.assertFalse(cur.hasFailures());
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
@@ -529,7 +533,10 @@ public class HttpIntegrationTests extends SingleClusterTest {
 
             ConfigUpdateResponse cur = tc.execute(
                 ConfigUpdateAction.INSTANCE,
-                new ConfigUpdateRequest(new String[] { "config", "roles", "rolesmapping", "internalusers", "actiongroups" })
+                new ConfigUpdateRequest(
+                    new CType[] { CType.CONFIG, CType.ROLES, CType.ROLESMAPPING, CType.INTERNALUSERS, CType.ACTIONGROUPS },
+                    null
+                )
             ).actionGet();
             Assert.assertFalse(cur.hasFailures());
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());

@@ -27,7 +27,6 @@
 package org.opensearch.security.rest;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
 
@@ -178,10 +177,7 @@ public class TenantInfoAction extends BaseRestHandler {
     }
 
     private final SecurityDynamicConfiguration<?> load(final CType config, boolean logComplianceEvent) {
-        SecurityDynamicConfiguration<?> loaded = configurationRepository.getConfigurationsFromIndex(
-            Collections.singleton(config),
-            logComplianceEvent
-        ).get(config).deepClone();
+        SecurityDynamicConfiguration<?> loaded = configurationRepository.getConfigurationFromIndex(config, logComplianceEvent).deepClone();
         return DynamicConfigFactory.addStatics(loaded);
     }
 

@@ -290,7 +290,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
     private static void triggerConfigurationReload(Client client) {
         ConfigUpdateResponse configUpdateResponse = client.execute(
             ConfigUpdateAction.INSTANCE,
-            new ConfigUpdateRequest(CType.lcStringValues().toArray(new String[0]))
+            new ConfigUpdateRequest(CType.values(), null)
         ).actionGet();
         if (configUpdateResponse.hasFailures()) {
             throw new RuntimeException("ConfigUpdateResponse produced failures: " + configUpdateResponse.failures());

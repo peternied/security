@@ -16,14 +16,12 @@ import org.junit.Test;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.security.securityconf.impl.CType;
 
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
 
 public class RolesMappingApiActionValidationTest extends AbstractApiActionValidationTest {
 
@@ -62,8 +60,7 @@ public class RolesMappingApiActionValidationTest extends AbstractApiActionValida
     public void onConfigChangeShouldCheckRoles() throws Exception {
         when(restApiAdminPrivilegesEvaluator.isCurrentUserAdminFor(Endpoint.ROLESMAPPING)).thenReturn(false);
         when(restApiAdminPrivilegesEvaluator.containsRestApiAdminPermissions(any(Object.class))).thenCallRealMethod();
-        when(configurationRepository.getConfigurationsFromIndex(List.of(CType.ROLES), false))
-                .thenReturn(Map.of(CType.ROLES, rolesConfiguration));
+        doReturn(rolesConfiguration).when(configurationRepository).getConfigurationFromIndex(CType.ROLES, false);
         final var rolesApiActionEndpointValidator =
                 new RolesMappingApiAction(clusterService, threadPool,
                         securityApiDependencies).createEndpointValidator();

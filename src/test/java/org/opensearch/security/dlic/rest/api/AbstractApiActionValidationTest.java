@@ -31,10 +31,9 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
 
 @RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractApiActionValidationTest {
@@ -87,9 +86,7 @@ public abstract class AbstractApiActionValidationTest {
         config.set("regular_role", objectMapper.createObjectNode().set("cluster_permissions", objectMapper.createArrayNode().add("*")));
 
         rolesConfiguration = SecurityDynamicConfiguration.fromJson(objectMapper.writeValueAsString(config), CType.ROLES, 2, 1, 1);
-        when(configurationRepository.getConfigurationsFromIndex(List.of(CType.ROLES), false)).thenReturn(
-            Map.of(CType.ROLES, rolesConfiguration)
-        );
+        doReturn(rolesConfiguration).when(configurationRepository).getConfigurationFromIndex(CType.ROLES, false);
     }
 
     @Test

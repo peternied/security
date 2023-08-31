@@ -83,8 +83,8 @@ public enum CType {
         return Arrays.stream(CType.values()).map(c -> c.toLCString()).collect(Collectors.toSet());
     }
 
-    public static Set<CType> fromStringValues(String[] strings) {
-        return Arrays.stream(strings).map(c -> CType.fromString(c)).collect(Collectors.toSet());
+    public static CType[] fromStringValues(String[] strings) {
+        return Arrays.stream(strings).map(c -> CType.fromString(c)).collect(Collectors.toList()).toArray(new CType[0]);
     }
 
     private static Map<Integer, Class<?>> toMap(Object... objects) {

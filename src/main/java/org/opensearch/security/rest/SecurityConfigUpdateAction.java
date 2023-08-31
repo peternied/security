@@ -29,6 +29,7 @@ import org.opensearch.rest.action.RestActions.NodesResponseRestListener;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.configuration.AdminDNs;
+import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.security.ssl.util.SSLRequestHelper;
 import org.opensearch.security.support.ConfigConstants;
@@ -71,7 +72,8 @@ public class SecurityConfigUpdateAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        String[] configTypes = request.paramAsStringArrayOrEmptyIfAll("config_types");
+        final String[] rawConfigTypes = request.paramAsStringArrayOrEmptyIfAll("config_types");
+        final CType[] configTypes = CType.fromStringValues(rawConfigTypes);
 
         SSLRequestHelper.SSLInfo sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor);
 
@@ -85,7 +87,7 @@ public class SecurityConfigUpdateAction extends BaseRestHandler {
         if (user == null || !adminDns.isAdmin(user)) {
             return channel -> channel.sendResponse(new BytesRestResponse(RestStatus.FORBIDDEN, ""));
         } else {
-            ConfigUpdateRequest configUpdateRequest = new ConfigUpdateRequest(configTypes);
+            ConfigUpdateRequest configUpdateRequest = new ConfigUpdateRequest(configTypes, null);
             return channel -> {
                 client.execute(ConfigUpdateAction.INSTANCE, configUpdateRequest, new NodesResponseRestListener<>(channel));
             };

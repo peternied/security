@@ -57,7 +57,6 @@ import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -430,8 +429,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
     protected final SecurityDynamicConfiguration<?> load(final CType config, boolean logComplianceEvent) {
         SecurityDynamicConfiguration<?> loaded = securityApiDependencies.configurationRepository()
-            .getConfigurationsFromIndex(List.of(config), logComplianceEvent)
-            .get(config)
+            .getConfigurationFromIndex(config, logComplianceEvent)
             .deepClone();
         return DynamicConfigFactory.addStatics(loaded);
     }
@@ -479,7 +477,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
                     .setIfSeqNo(configuration.getSeqNo())
                     .setIfPrimaryTerm(configuration.getPrimaryTerm())
                     .source(id, XContentHelper.toXContent(configuration, XContentType.JSON, false)),
-                new ConfigUpdatingActionListener<>(new String[] { id }, client, actionListener)
+                new ConfigUpdatingActionListener<>(Map.of(cType, Long.valueOf(configuration.getSeqNo())), client, actionListener)
             );
         } catch (IOException e) {
             throw ExceptionsHelper.convertToOpenSearchException(e);
@@ -487,12 +485,12 @@ public abstract class AbstractApiAction extends BaseRestHandler {
     }
 
     protected static class ConfigUpdatingActionListener<Response> implements ActionListener<Response> {
-        private final String[] cTypes;
+        private final Map<CType, Long> typesAndSequenceIds;
         private final Client client;
         private final ActionListener<Response> delegate;
 
-        public ConfigUpdatingActionListener(String[] cTypes, Client client, ActionListener<Response> delegate) {
-            this.cTypes = Objects.requireNonNull(cTypes, "cTypes must not be null");
+        public ConfigUpdatingActionListener(Map<CType, Long> typesAndSequenceIds, Client client, ActionListener<Response> delegate) {
+            this.typesAndSequenceIds = Objects.requireNonNull(typesAndSequenceIds, "cTypes must not be null");
             this.client = Objects.requireNonNull(client, "client must not be null");
             this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
         }
@@ -500,7 +498,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         @Override
         public void onResponse(Response response) {
 
-            final ConfigUpdateRequest cur = new ConfigUpdateRequest(cTypes);
+            final ConfigUpdateRequest cur = new ConfigUpdateRequest(
+                typesAndSequenceIds.keySet().toArray(new CType[0]),
+                typesAndSequenceIds.values().toArray(new Long[0])
+            );
 
             client.execute(ConfigUpdateAction.INSTANCE, cur, new ActionListener<ConfigUpdateResponse>() {
                 @Override

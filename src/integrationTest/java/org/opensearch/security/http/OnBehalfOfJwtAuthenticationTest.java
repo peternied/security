@@ -22,7 +22,7 @@ import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.apache.hc.core5.http.Header;
-import org.apache.hc.core5.http.HttpStatus;
+import org.apache.http.HttpStatus;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.ClassRule;

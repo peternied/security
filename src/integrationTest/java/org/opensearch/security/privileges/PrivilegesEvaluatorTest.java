@@ -17,7 +17,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.opensearch.script.mustache.MustacheModulePlugin;
+import org.opensearch.script.mustache.MustachePlugin;
 import org.opensearch.test.framework.TestSecurityConfig;
 import org.opensearch.test.framework.TestSecurityConfig.Role;
 import org.opensearch.test.framework.cluster.ClusterManager;
@@ -58,7 +58,7 @@ public class PrivilegesEvaluatorTest {
     public static LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.THREE_CLUSTER_MANAGERS)
         .authc(AUTHC_HTTPBASIC_INTERNAL)
         .users(NEGATIVE_LOOKAHEAD, NEGATED_REGEX, SEARCH_TEMPLATE, TestSecurityConfig.User.USER_ADMIN)
-        .plugin(MustacheModulePlugin.class)
+        .plugin(MustachePlugin.class)
         .build();
 
     @Test
@@ -90,7 +90,7 @@ public class PrivilegesEvaluatorTest {
 
         try (TestRestClient client = cluster.getRestClient(SEARCH_TEMPLATE)) {
             final String searchTemplateOnServicesIndex = "services/_search/template";
-            final TestRestClient.HttpResponse searchTemplateOnAuthorizedIndexResponse = client.getWithJsonBody(
+            final TestRestClient.HttpResponse searchTemplateOnAuthorizedIndexResponse = client.postJson(
                 searchTemplateOnServicesIndex,
                 TEST_QUERY
             );
@@ -102,7 +102,7 @@ public class PrivilegesEvaluatorTest {
     public void testSearchTemplateRequestUnauthorizedIndex() {
         try (TestRestClient client = cluster.getRestClient(SEARCH_TEMPLATE)) {
             final String searchTemplateOnMoviesIndex = "movies/_search/template";
-            final TestRestClient.HttpResponse searchTemplateOnUnauthorizedIndexResponse = client.getWithJsonBody(
+            final TestRestClient.HttpResponse searchTemplateOnUnauthorizedIndexResponse = client.postJson(
                 searchTemplateOnMoviesIndex,
                 TEST_QUERY
             );
@@ -114,7 +114,7 @@ public class PrivilegesEvaluatorTest {
     public void testSearchTemplateRequestUnauthorizedAllIndices() {
         try (TestRestClient client = cluster.getRestClient(SEARCH_TEMPLATE)) {
             final String searchTemplateOnAllIndices = "_search/template";
-            final TestRestClient.HttpResponse searchOnAllIndicesResponse = client.getWithJsonBody(searchTemplateOnAllIndices, TEST_QUERY);
+            final TestRestClient.HttpResponse searchOnAllIndicesResponse = client.postJson(searchTemplateOnAllIndices, TEST_QUERY);
             assertThat(searchOnAllIndicesResponse.getStatusCode(), equalTo(HttpStatus.SC_FORBIDDEN));
         }
     }

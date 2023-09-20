@@ -16,11 +16,11 @@ import java.util.Map;
 import javax.net.ssl.SSLHandshakeException;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.NoHttpResponseException;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.NoHttpResponseException;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -89,7 +89,7 @@ public class TlsTests {
 
             try (CloseableHttpResponse response = client.execute(httpGet)) {
 
-                int responseStatusCode = response.getCode();
+                int responseStatusCode = response.getStatusLine().getStatusCode();
                 assertThat(responseStatusCode, equalTo(200));
             }
         }

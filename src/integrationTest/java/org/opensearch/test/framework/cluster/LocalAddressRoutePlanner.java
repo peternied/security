@@ -12,10 +12,8 @@ package org.opensearch.test.framework.cluster;
 import java.net.InetAddress;
 import java.util.Objects;
 
-import org.apache.hc.client5.http.impl.DefaultSchemePortResolver;
-import org.apache.hc.client5.http.impl.routing.DefaultRoutePlanner;
-import org.apache.hc.core5.http.HttpHost;
-import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.http.impl.conn.DefaultRoutePlanner;
+import org.apache.http.impl.conn.DefaultSchemePortResolver;
 
 /**
 * Class which can be used to bind Apache HTTP client to a particular network interface or its IP address so that the IP address of
@@ -38,11 +36,12 @@ class LocalAddressRoutePlanner extends DefaultRoutePlanner {
         this.localAddress = Objects.requireNonNull(localAddress);
     }
 
-    /**
-    * Determines IP address used by the client socket of Apache HTTP client
-    */
-    @Override
-    protected InetAddress determineLocalAddress(HttpHost firstHop, HttpContext context) {
-        return localAddress;
-    }
+    /** TODO: HOW SHOULD THIS BE REPLACED ??? */
+    // /**
+    // * Determines IP address used by the client socket of Apache HTTP client
+    // */
+    // @Override
+    // protected InetAddress determineLocalAddress(HttpHost firstHop, HttpContext context) {
+    //     return localAddress;
+    // }
 }

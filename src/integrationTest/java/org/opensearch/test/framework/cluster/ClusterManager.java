@@ -38,13 +38,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.opensearch.index.reindex.ReindexModulePlugin;
-import org.opensearch.join.ParentJoinModulePlugin;
-import org.opensearch.percolator.PercolatorModulePlugin;
+import org.opensearch.index.reindex.ReindexPlugin;
+import org.opensearch.join.ParentJoinPlugin;
+import org.opensearch.percolator.PercolatorPlugin;
 import org.opensearch.plugins.Plugin;
-import org.opensearch.search.aggregations.matrix.MatrixAggregationModulePlugin;
+import org.opensearch.search.aggregations.matrix.MatrixAggregationPlugin;
 import org.opensearch.security.OpenSearchSecurityPlugin;
-import org.opensearch.transport.Netty4ModulePlugin;
+import org.opensearch.transport.Netty4Plugin;
 
 import static java.util.Collections.unmodifiableList;
 import static org.opensearch.test.framework.cluster.NodeType.CLIENT;
@@ -113,12 +113,12 @@ public enum ClusterManager {
     public static class NodeSettings {
 
         private final static List<Class<? extends Plugin>> DEFAULT_PLUGINS = List.of(
-            Netty4ModulePlugin.class,
+            Netty4Plugin.class,
             OpenSearchSecurityPlugin.class,
-            MatrixAggregationModulePlugin.class,
-            ParentJoinModulePlugin.class,
-            PercolatorModulePlugin.class,
-            ReindexModulePlugin.class
+            MatrixAggregationPlugin.class,
+            ParentJoinPlugin.class,
+            PercolatorPlugin.class,
+            ReindexPlugin.class
         );
 
         private final Set<NodeRole> roles;

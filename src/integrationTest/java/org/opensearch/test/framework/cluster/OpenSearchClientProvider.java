@@ -44,23 +44,13 @@ import java.util.stream.Stream;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.Header;
+import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.auth.BasicCredentialsProvider;
-import org.apache.http.classic.CloseableHttpClient;
-import org.apache.http.nio.PoolingAsyncClientConnectionManagerBuilder;
-import org.apache.http.nio.AsyncClientConnectionManager;
-import org.apache.http.ssl.ClientTlsStrategyBuilder;
-import org.apache.http.ssl.NoopHostnameVerifier;
-import org.apache.function.Factory;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpHost;
-import org.apache.http.nio.ssl.TlsStrategy;
-import org.apache.reactor.ssl.TlsDetails;
-
 import org.opensearch.client.RestClient;
 import org.opensearch.client.RestClientBuilder;
 import org.opensearch.client.RestHighLevelClient;
@@ -130,7 +120,7 @@ public interface OpenSearchClientProvider {
         BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(
             new AuthScope(null, -1),
-            new UsernamePasswordCredentials(user.getName(), user.getPassword().toCharArray())
+            new UsernamePasswordCredentials(user.getName(), user.getPassword())
         );
 
         return getRestHighLevelClient(credentialsProvider, defaultHeaders);
@@ -145,37 +135,37 @@ public interface OpenSearchClientProvider {
         Collection<? extends Header> defaultHeaders
     ) {
         RestClientBuilder.HttpClientConfigCallback configCallback = httpClientBuilder -> {
-            TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
-                .setSslContext(getSSLContext())
-                .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                // See please https://issues.apache.org/jira/browse/HTTPCLIENT-2219
-                .setTlsDetailsFactory(new Factory<SSLEngine, TlsDetails>() {
-                    @Override
-                    public TlsDetails create(final SSLEngine sslEngine) {
-                        return new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol());
-                    }
-                })
-                .build();
+            /** TODO: HOW SHOULD THIS BE REPLACED ??? */
+            // TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
+            //     .setSslContext(getSSLContext())
+            //     .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+            //     // See please https://issues.apache.org/jira/browse/HTTPCLIENT-2219
+            //     .setTlsDetailsFactory(new Factory<SSLEngine, TlsDetails>() {
+            //         @Override
+            //         public TlsDetails create(final SSLEngine sslEngine) {
+            //             return new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol());
+            //         }
+            //     })
+            //     .build();
 
-            final AsyncClientConnectionManager cm = PoolingAsyncClientConnectionManagerBuilder.create().setTlsStrategy(tlsStrategy).build();
+            // final AsyncClientConnectionManager cm = PoolingAsyncClientConnectionManagerBuilder.create().setTlsStrategy(tlsStrategy).build();
 
             if (credentialsProvider != null) {
                 httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
             }
-            httpClientBuilder.setDefaultHeaders(defaultHeaders);
-            httpClientBuilder.setConnectionManager(cm);
+            // httpClientBuilder.setConnectionManager(cm);
             httpClientBuilder.setDefaultHeaders(defaultHeaders);
             return httpClientBuilder;
         };
 
         InetSocketAddress httpAddress = getHttpAddress();
-        RestClientBuilder builder = RestClient.builder(new HttpHost("https", httpAddress.getHostString(), httpAddress.getPort()))
+        RestClientBuilder builder = RestClient.builder(new HttpHost(httpAddress.getHostString(), httpAddress.getPort(), "https"))
             .setHttpClientConfigCallback(configCallback);
 
         return new RestHighLevelClient(builder);
     }
 
-    default CloseableHttpClient getClosableHttpClient(String[] supportedCipherSuit) {
+    default org.apache.http.impl.client.CloseableHttpClient getClosableHttpClient(String[] supportedCipherSuit) {
         CloseableHttpClientFactory factory = new CloseableHttpClientFactory(getSSLContext(), null, null, supportedCipherSuit);
         return factory.getHTTPClient();
     }
@@ -241,7 +231,7 @@ public interface OpenSearchClientProvider {
         X509Certificate[] trustCertificates;
 
         try {
-            trustCertificates = PemKeyReader.loadCertificatesFromFile(getTestCertificates().getRootCertificate());
+            trustCertificates = PemKeyReader.loadCertificatesFromFile(getTestCertificates().getRootCertificate().getAbsolutePath());
 
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());

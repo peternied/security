@@ -91,9 +91,12 @@ public class TestRestClientConfiguration {
     * @return builder
     */
     public TestRestClientConfiguration header(final String headerName, final String headerValue) {
-        this.headers.add(new BasicHeader(
-            Objects.requireNonNull(headerName, "Header names are required"), 
-            Objects.requireNonNull(headerValue, "Header values are required")));
+        this.headers.add(
+            new BasicHeader(
+                Objects.requireNonNull(headerName, "Header names are required"),
+                Objects.requireNonNull(headerValue, "Header values are required")
+            )
+        );
         return this;
     }
 

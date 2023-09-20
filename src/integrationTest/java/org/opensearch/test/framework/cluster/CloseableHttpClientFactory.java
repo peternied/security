@@ -10,7 +10,6 @@
 package org.opensearch.test.framework.cluster;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
 
@@ -60,9 +59,9 @@ class CloseableHttpClientFactory {
         final HttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
         /** TODO: HOW SHOULD THIS BE REPLACED ??? */
         // final HttpClientConnectionManager cm = PoolingHttpClientConnectionManagerBuilder.create()
-        //     .setSSLSocketFactory(sslsf)
-        //     .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(60, TimeUnit.SECONDS).build())
-        //     .build();
+        // .setSSLSocketFactory(sslsf)
+        // .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(60, TimeUnit.SECONDS).build())
+        // .build();
         hcb.setConnectionManager(cm);
         if (routePlanner != null) {
             hcb.setRoutePlanner(routePlanner);

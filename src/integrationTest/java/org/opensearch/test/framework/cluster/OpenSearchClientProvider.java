@@ -118,10 +118,7 @@ public interface OpenSearchClientProvider {
     default RestHighLevelClient getRestHighLevelClient(UserCredentialsHolder user, Collection<? extends Header> defaultHeaders) {
 
         BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(
-            new AuthScope(null, -1),
-            new UsernamePasswordCredentials(user.getName(), user.getPassword())
-        );
+        credentialsProvider.setCredentials(new AuthScope(null, -1), new UsernamePasswordCredentials(user.getName(), user.getPassword()));
 
         return getRestHighLevelClient(credentialsProvider, defaultHeaders);
     }
@@ -137,18 +134,19 @@ public interface OpenSearchClientProvider {
         RestClientBuilder.HttpClientConfigCallback configCallback = httpClientBuilder -> {
             /** TODO: HOW SHOULD THIS BE REPLACED ??? */
             // TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
-            //     .setSslContext(getSSLContext())
-            //     .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-            //     // See please https://issues.apache.org/jira/browse/HTTPCLIENT-2219
-            //     .setTlsDetailsFactory(new Factory<SSLEngine, TlsDetails>() {
-            //         @Override
-            //         public TlsDetails create(final SSLEngine sslEngine) {
-            //             return new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol());
-            //         }
-            //     })
-            //     .build();
+            // .setSslContext(getSSLContext())
+            // .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+            // // See please https://issues.apache.org/jira/browse/HTTPCLIENT-2219
+            // .setTlsDetailsFactory(new Factory<SSLEngine, TlsDetails>() {
+            // @Override
+            // public TlsDetails create(final SSLEngine sslEngine) {
+            // return new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol());
+            // }
+            // })
+            // .build();
 
-            // final AsyncClientConnectionManager cm = PoolingAsyncClientConnectionManagerBuilder.create().setTlsStrategy(tlsStrategy).build();
+            // final AsyncClientConnectionManager cm =
+            // PoolingAsyncClientConnectionManagerBuilder.create().setTlsStrategy(tlsStrategy).build();
 
             if (credentialsProvider != null) {
                 httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);

@@ -42,6 +42,6 @@ class LocalAddressRoutePlanner extends DefaultRoutePlanner {
     // */
     // @Override
     // protected InetAddress determineLocalAddress(HttpHost firstHop, HttpContext context) {
-    //     return localAddress;
+    // return localAddress;
     // }
 }

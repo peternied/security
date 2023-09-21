@@ -28,6 +28,8 @@
 
 package org.opensearch.test.framework.cluster;
 
+import static org.opensearch.test.framework.cluster.TestRestClientConfiguration.getBasicAuthHeader;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -38,6 +40,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,19 +49,19 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.nio.conn.ssl.SSLIOSessionStrategy;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.RestClientBuilder;
 import org.opensearch.client.RestHighLevelClient;
 import org.opensearch.security.support.PemKeyReader;
 import org.opensearch.test.framework.certificate.CertificateData;
 import org.opensearch.test.framework.certificate.TestCertificates;
-
-import static org.opensearch.test.framework.cluster.TestRestClientConfiguration.getBasicAuthHeader;
 
 /**
 * OpenSearchClientProvider provides methods to get a REST client for an underlying cluster or node.
@@ -132,26 +135,15 @@ public interface OpenSearchClientProvider {
         Collection<? extends Header> defaultHeaders
     ) {
         RestClientBuilder.HttpClientConfigCallback configCallback = httpClientBuilder -> {
-            /** TODO: HOW SHOULD THIS BE REPLACED ??? */
-            // TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
-            // .setSslContext(getSSLContext())
-            // .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-            // // See please https://issues.apache.org/jira/browse/HTTPCLIENT-2219
-            // .setTlsDetailsFactory(new Factory<SSLEngine, TlsDetails>() {
-            // @Override
-            // public TlsDetails create(final SSLEngine sslEngine) {
-            // return new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol());
-            // }
-            // })
-            // .build();
-
-            // final AsyncClientConnectionManager cm =
-            // PoolingAsyncClientConnectionManagerBuilder.create().setTlsStrategy(tlsStrategy).build();
-
-            if (credentialsProvider != null) {
-                httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-            }
-            // httpClientBuilder.setConnectionManager(cm);
+            Optional.ofNullable(credentialsProvider).ifPresent(httpClientBuilder::setDefaultCredentialsProvider);
+            httpClientBuilder.setSSLStrategy(
+                new SSLIOSessionStrategy(
+                    getSSLContext(),
+                    /* Use default supported protocols */ null,
+                    /* Use default supported cipher suites */ null,
+                    NoopHostnameVerifier.INSTANCE
+                )
+            );
             httpClientBuilder.setDefaultHeaders(defaultHeaders);
             return httpClientBuilder;
         };

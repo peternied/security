@@ -12,8 +12,15 @@ package org.opensearch.test.framework.cluster;
 import java.net.InetAddress;
 import java.util.Objects;
 
+import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.impl.conn.DefaultRoutePlanner;
 import org.apache.http.impl.conn.DefaultSchemePortResolver;
+import org.apache.http.protocol.HttpContext;
 
 /**
 * Class which can be used to bind Apache HTTP client to a particular network interface or its IP address so that the IP address of
@@ -36,12 +43,14 @@ class LocalAddressRoutePlanner extends DefaultRoutePlanner {
         this.localAddress = Objects.requireNonNull(localAddress);
     }
 
-    /** TODO: HOW SHOULD THIS BE REPLACED ??? */
-    // /**
-    // * Determines IP address used by the client socket of Apache HTTP client
-    // */
-    // @Override
-    // protected InetAddress determineLocalAddress(HttpHost firstHop, HttpContext context) {
-    // return localAddress;
-    // }
+    @Override
+    public HttpRoute determineRoute(final HttpHost host, final HttpRequest request, final HttpContext context) throws HttpException {
+        final HttpClientContext clientContext = HttpClientContext.adapt(context);
+        final RequestConfig localRequsetConfig = RequestConfig.copy(clientContext.getRequestConfig())
+            .setLocalAddress(this.localAddress)
+            .build();
+        clientContext.setRequestConfig(localRequsetConfig);
+
+        return super.determineRoute(host, request, clientContext);
+    }
 }

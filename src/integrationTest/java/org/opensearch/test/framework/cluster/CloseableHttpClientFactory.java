@@ -10,12 +10,15 @@
 package org.opensearch.test.framework.cluster;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
 
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.routing.HttpRoutePlanner;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -31,7 +34,7 @@ class CloseableHttpClientFactory {
 
     private final HttpRoutePlanner routePlanner;
 
-    private final String[] supportedCipherSuit;
+    private final String[] supportedCipherSuites;
 
     public CloseableHttpClientFactory(
         SSLContext sslContext,
@@ -42,7 +45,7 @@ class CloseableHttpClientFactory {
         this.sslContext = Objects.requireNonNull(sslContext, "SSL context is required.");
         this.requestConfig = requestConfig;
         this.routePlanner = routePlanner;
-        this.supportedCipherSuit = supportedCipherSuit;
+        this.supportedCipherSuites = supportedCipherSuit;
     }
 
     public CloseableHttpClient getHTTPClient() {
@@ -51,17 +54,19 @@ class CloseableHttpClientFactory {
 
         final SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
             this.sslContext,
-            null,
-            supportedCipherSuit,
+            /* Uses default supported protocals */ null,
+            supportedCipherSuites,
             NoopHostnameVerifier.INSTANCE
         );
 
-        final HttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        /** TODO: HOW SHOULD THIS BE REPLACED ??? */
-        // final HttpClientConnectionManager cm = PoolingHttpClientConnectionManagerBuilder.create()
-        // .setSSLSocketFactory(sslsf)
-        // .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(60, TimeUnit.SECONDS).build())
-        // .build();
+        final HttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(
+            RegistryBuilder.<ConnectionSocketFactory>create().register("https", sslsf).build(),
+            /* Uses default connnction factory */ null,
+            /* Uses default scheme port resolver */ null,
+            /* Uses default dns resolver */ null,
+            60,
+            TimeUnit.SECONDS
+        );
         hcb.setConnectionManager(cm);
         if (routePlanner != null) {
             hcb.setRoutePlanner(routePlanner);

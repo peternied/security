@@ -543,7 +543,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         return channel -> {
             final SecurityRequestChannel securityRequest = SecurityRequestFactory.from(request, channel);
 
-
             // check if .opendistro_security index has been initialized
             if (!ensureIndexExists()) {
                 internalSeverError(channel, RequestContentValidator.ValidationError.SECURITY_NOT_INITIALIZED.message());

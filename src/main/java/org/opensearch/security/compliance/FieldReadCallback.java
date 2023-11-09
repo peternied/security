@@ -101,12 +101,11 @@ public final class FieldReadCallback {
 
             if (fieldInfo.name.equals("_source")) {
 
+                Map<String, Object> filteredSource = Utils.byteArrayToMutableJsonMap(fieldValue);
                 if (filterFunction != null) {
-                    final Map<String, Object> filteredSource = filterFunction.apply(Utils.byteArrayToMutableJsonMap(fieldValue));
-                    fieldValue = Utils.jsonMapToByteArray(filteredSource);
+                    filteredSource = filterFunction.apply(filteredSource);
                 }
 
-                final Map<String, Object> filteredSource = JsonFlattener.flattenAsMap(new String(fieldValue, StandardCharsets.UTF_8));
                 for (String k : filteredSource.keySet()) {
                     if (!recordField(k, filteredSource.get(k) instanceof String)) {
                         continue;

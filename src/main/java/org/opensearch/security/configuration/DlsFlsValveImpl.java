@@ -380,24 +380,32 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
     private void setDlsHeaders(EvaluatedDlsFlsConfig dlsFls, ActionRequest request) {
         if (!dlsFls.getDlsQueriesByIndex().isEmpty()) {
+            final long startgetDlsQueriesByIndexMs = System.currentTimeMillis();
             Map<String, Set<String>> dlsQueries = dlsFls.getDlsQueriesByIndex();
+            final long endgetDlsQueriesByIndexMs = System.currentTimeMillis() - startgetDlsQueriesByIndexMs;
+            // log.error("$$$$ Timeto compute dls queries by index, {}ms", endgetDlsQueriesByIndexMs);
 
             if (request instanceof ClusterSearchShardsRequest && HeaderHelper.isTrustedClusterRequest(threadContext)) {
                 threadContext.addResponseHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER, Base64Helper.serializeObject((Serializable) dlsQueries));
-                if (log.isDebugEnabled()) {
-                    log.debug("added response header for DLS info: {}", dlsQueries);
-                }
+                // log.error("$$$$added response header for DLS info: {}", dlsQueries);
             } else {
                 if (threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER) != null) {
+                    final long startMs = System.currentTimeMillis();
                     Object deserializedDlsQueries = Base64Helper.deserializeObject(threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER));
+                    final long endMs = System.currentTimeMillis() - startMs;
                     if (!dlsQueries.equals(deserializedDlsQueries)) {                        
                         throw new OpenSearchSecurityException(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER + " does not match (SG 900D)");
                     }
+                    // log.error("$$$$ {}ms found dls query header: {}", endMs, deserializedDlsQueries);
                 } else {
-                    threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER, Base64Helper.serializeObject((Serializable) dlsQueries));
-                    if (log.isDebugEnabled()) {
-                        log.debug("attach DLS info: {}", dlsQueries);
-                    }
+                    final long startMs1 = System.currentTimeMillis();
+                    final String serialized = Base64Helper.serializeObject((Serializable) dlsQueries);
+                    final long endMs1 = System.currentTimeMillis() - startMs1;
+
+                    final long startMs = System.currentTimeMillis();
+                    threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER, serialized);
+                    final long endMs = System.currentTimeMillis() - startMs;
+                    // log.error("$$$$ serialize {}ms, put header {}ms attach DLS info: {}",endMs1, endMs, dlsQueries);
                 }
             }
         }

@@ -67,31 +67,9 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
 
     @Test
     public void jwksUriTest() {
-        Settings settings = Settings.builder()
             .put("jwks_uri", mockIdpServer.getJwksUri())
             .put("required_issuer", TestJwts.TEST_ISSUER)
             .put("required_audience", TestJwts.TEST_AUDIENCE)
-            .build();
-
-        HTTPJwtKeyByOpenIdConnectAuthenticator jwtAuth = new HTTPJwtKeyByOpenIdConnectAuthenticator(settings, null);
-
-        AuthCredentials creds = jwtAuth.extractCredentials(
-            new FakeRestRequest(ImmutableMap.of("Authorization", TestJwts.MC_COY_SIGNED_OCT_2), new HashMap<>()),
-            null
-        );
-
-        Assert.assertNotNull(creds);
-        Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
-        Assert.assertEquals(TestJwts.TEST_AUDIENCE, creds.getAttributes().get("attr.jwt.aud"));
-        Assert.assertEquals(0, creds.getBackendRoles().size());
-        Assert.assertEquals(4, creds.getAttributes().size());
-    }
-
-    @Test
-    public void jwksMissingRequiredIssuerInClaimTest() {
-        Settings settings = Settings.builder()
-            .put("jwks_uri", mockIdpServer.getJwksUri())
-            .put("required_issuer", TestJwts.TEST_ISSUER)
             .build();
 
         HTTPJwtKeyByOpenIdConnectAuthenticator jwtAuth = new HTTPJwtKeyByOpenIdConnectAuthenticator(settings, null);

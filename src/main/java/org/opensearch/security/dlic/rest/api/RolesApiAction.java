@@ -113,5 +113,4 @@ public class RolesApiAction extends PatchableResourceApiAction {
             return super.isReadOnly(existingConfiguration, name);
         }
     }
-
 }

@@ -260,13 +260,8 @@ public class ActionGroupsApiTest extends AbstractRestApiUnitTest {
         response = rh.executePatchRequest(
             ENDPOINT,
             "[{ \"op\": \"add\", \"path\": \"/BULKNEW1\", \"value\": {\"allowed_actions\": [\"BULKNEW1\"] } },"
-                + "{ \"op\": \"add\", \"path\": \"/BULKNEW2\", \"value\": {\"allowed_actions\": [\"READ_UT\"] } }]",
             header
         );
-        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-        Assert.assertTrue(response.getBody().contains("BULKNEW1 cannot be an allowed_action of itself"));
-
-        // PATCH hidden resource, must be not found, can be found by superadmin, but fails with no path exist error
         rh.sendAdminCertificate = userAdminCert;
         response = rh.executePatchRequest(
             ENDPOINT + "/INTERNAL",

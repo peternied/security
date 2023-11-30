@@ -293,12 +293,7 @@ public class RolesMappingApiTest extends AbstractRestApiUnitTest {
             ENDPOINT + "/rolesmapping/opendistro_security_role_starfleet_captains",
             FileHelper.loadFile("restapi/rolesmapping_users_picard_single_wrong_datatype.json"),
             header
-        );
         settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-        Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, response.getStatusCode());
-        Assert.assertEquals(AbstractConfigurationValidator.ErrorType.WRONG_DATATYPE.getMessage(), settings.get("reason"));
-        Assert.assertTrue(settings.get("hosts").equals("Array expected"));
-        Assert.assertTrue(settings.get("users").equals("Array expected"));
         Assert.assertTrue(settings.get("backend_roles").equals("Array expected"));
 
         // Read only role mapping

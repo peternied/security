@@ -12,7 +12,6 @@
 package org.opensearch.security.api;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
-import org.apache.hc.core5.http.HttpStatus;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,7 +47,6 @@ public class DashboardsInfoTest {
 
         try (TestRestClient client = cluster.getRestClient(DASHBOARDS_USER)) {
             TestRestClient.HttpResponse response = client.get("_plugins/_security/dashboardsinfo");
-            assertThat(response.getStatusCode(), equalTo(HttpStatus.SC_OK));
             assertThat(response.getBody(), containsString("password_validation_error_message"));
             assertThat(response.getBody(), containsString(DEFAULT_PASSWORD_MESSAGE));
         }

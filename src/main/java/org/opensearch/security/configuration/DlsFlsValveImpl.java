@@ -428,7 +428,10 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
     private void setDlsHeaders(EvaluatedDlsFlsConfig dlsFls, ActionRequest request) {
         if (!dlsFls.getDlsQueriesByIndex().isEmpty()) {
+            final long startgetDlsQueriesByIndexMs = System.currentTimeMillis();
             Map<String, Set<String>> dlsQueries = dlsFls.getDlsQueriesByIndex();
+            final long endgetDlsQueriesByIndexMs = System.currentTimeMillis() - startgetDlsQueriesByIndexMs;
+            // log.error("$$$$ Timeto compute dls queries by index, {}ms", endgetDlsQueriesByIndexMs);
 
             if (request instanceof ClusterSearchShardsRequest && HeaderHelper.isTrustedClusterRequest(threadContext)) {
                 threadContext.addResponseHeader(
@@ -448,6 +451,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                             ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER + " does not match (SG 900D)"
                         );
                     }
+                    // log.error("$$$$ {}ms found dls query header: {}", endMs, deserializedDlsQueries);
                 } else {
                     threadContext.putHeader(
                         ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER,

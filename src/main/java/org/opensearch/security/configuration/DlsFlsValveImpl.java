@@ -430,35 +430,44 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
     private void setDlsHeaders(EvaluatedDlsFlsConfig dlsFls, ActionRequest request) {
         if (!dlsFls.getDlsQueriesByIndex().isEmpty()) {
+
+            final long startgetDlsQueriesByIndexMs = System.currentTimeMillis();
             Map<String, Set<String>> dlsQueries = dlsFls.getDlsQueriesByIndex();
+            final long endgetDlsQueriesByIndexMs = System.currentTimeMillis() - startgetDlsQueriesByIndexMs;
+            log.error("$$$$ Timeto compute dls queries by index, {}ms", endgetDlsQueriesByIndexMs);
 
             if (request instanceof ClusterSearchShardsRequest && HeaderHelper.isTrustedClusterRequest(threadContext)) {
                 threadContext.addResponseHeader(
                     ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER,
                     Base64Helper.serializeObject((Serializable) dlsQueries)
                 );
-                if (log.isDebugEnabled()) {
-                    log.debug("added response header for DLS info: {}", dlsQueries);
-                }
+                // if (log.isDebugEnabled()) {
+                    log.error("$$$$added response header for DLS info: {}", dlsQueries);
+                // }
             } else {
                 if (threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER) != null) {
+                    final long startMs = System.currentTimeMillis();
                     Object deserializedDlsQueries = Base64Helper.deserializeObject(
                         threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER),
                         threadContext.getTransient(ConfigConstants.USE_JDK_SERIALIZATION)
                     );
+                    final long endMs = System.currentTimeMillis() - startMs;
                     if (!dlsQueries.equals(deserializedDlsQueries)) {
                         throw new OpenSearchSecurityException(
                             ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER + " does not match (SG 900D)"
                         );
                     }
+                    log.error("$$$$ {}ms found dls query header: {}", endMs, deserializedDlsQueries);
                 } else {
+                    final long startMs = System.currentTimeMillis();
                     threadContext.putHeader(
                         ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER,
-                        Base64Helper.serializeObject((Serializable) dlsQueries)
+                        Base64Helper.serializeObject((Serializable) dlsQueries, false)
                     );
-                    if (log.isDebugEnabled()) {
-                        log.debug("attach DLS info: {}", dlsQueries);
-                    }
+                    final long endMs = System.currentTimeMillis() - startMs;
+                    // if (log.isDebugEnabled()) {
+                        log.error("$$$$ in {}ms attach DLS info: {}", endMs, dlsQueries);
+                    // }
                 }
             }
         }

@@ -380,11 +380,11 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             final long startgetDlsQueriesByIndexMs = System.currentTimeMillis();
             Map<String, Set<String>> dlsQueries = dlsFls.getDlsQueriesByIndex();
             final long endgetDlsQueriesByIndexMs = System.currentTimeMillis() - startgetDlsQueriesByIndexMs;
-            log.error("$$$$ Timeto compute dls queries by index, {}ms", endgetDlsQueriesByIndexMs);
+            // log.error("$$$$ Timeto compute dls queries by index, {}ms", endgetDlsQueriesByIndexMs);
 
             if (request instanceof ClusterSearchShardsRequest && HeaderHelper.isTrustedClusterRequest(threadContext)) {
                 threadContext.addResponseHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER, Base64Helper.serializeObject((Serializable) dlsQueries));
-                log.error("$$$$added response header for DLS info: {}", dlsQueries);
+                // log.error("$$$$added response header for DLS info: {}", dlsQueries);
             } else {
                 if (threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER) != null) {
                     final long startMs = System.currentTimeMillis();
@@ -393,7 +393,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                     if (!dlsQueries.equals(deserializedDlsQueries)) {                        
                         throw new OpenSearchSecurityException(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER + " does not match (SG 900D)");
                     }
-                    log.error("$$$$ {}ms found dls query header: {}", endMs, deserializedDlsQueries);
+                    // log.error("$$$$ {}ms found dls query header: {}", endMs, deserializedDlsQueries);
                 } else {
                     final long startMs1 = System.currentTimeMillis();
                     final String serialized = Base64Helper.serializeObject((Serializable) dlsQueries);
@@ -402,7 +402,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                     final long startMs = System.currentTimeMillis();
                     threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER, serialized);
                     final long endMs = System.currentTimeMillis() - startMs;
-                    log.error("$$$$ serialize {}ms, put header {}ms attach DLS info: {}",endMs1, endMs, dlsQueries);
+                    // log.error("$$$$ serialize {}ms, put header {}ms attach DLS info: {}",endMs1, endMs, dlsQueries);
                 }
             }
         }

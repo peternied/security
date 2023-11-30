@@ -459,14 +459,18 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                     }
                     log.error("$$$$ {}ms found dls query header: {}", endMs, deserializedDlsQueries);
                 } else {
+                    final long startMs1 = System.currentTimeMillis();
+                    final String serialized = Base64Helper.serializeObject((Serializable) dlsQueries, false);
+                    final long endMs1 = System.currentTimeMillis() - startMs1;
+
+
                     final long startMs = System.currentTimeMillis();
                     threadContext.putHeader(
-                        ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER,
-                        Base64Helper.serializeObject((Serializable) dlsQueries, false)
+                        ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_HEADER, serialized
                     );
                     final long endMs = System.currentTimeMillis() - startMs;
                     // if (log.isDebugEnabled()) {
-                        log.error("$$$$ in {}ms attach DLS info: {}", endMs, dlsQueries);
+                        log.error("$$$$ serialized {}ms, header in {}ms attach DLS info: {}", endMs1, endMs, dlsQueries);
                     // }
                 }
             }

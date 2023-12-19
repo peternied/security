@@ -563,12 +563,24 @@ public class ConfigModelV7 extends ConfigModel {
 
             return false;
         }
+
+        @Override
+        public boolean hasResourcePermission(final String resourceType, final String resourceId) {
+            for (SecurityRole role : roles) {
+                final ResourcePermission resourcePermission = role.resourcePermissions.get(resourceType);
+                if (resourcePermission != null && resourcePermission.permmittedResourceIds.contains(resourceId)) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     public static class SecurityRole {
         private final String name;
         private final Set<IndexPattern> ipatterns;
         private final WildcardMatcher clusterPerms;
+        private final Map<String, ResourcePermission> resourcePermissions; 
 
         public static final class Builder {
             private final String name;
@@ -600,6 +612,7 @@ public class ConfigModelV7 extends ConfigModel {
             this.name = Objects.requireNonNull(name);
             this.ipatterns = ipatterns;
             this.clusterPerms = clusterPerms;
+            this.resourcePermissions = new HashMap<String, ResourcePermission>();
         }
 
         private boolean impliesClusterPermission(String action) {
@@ -719,6 +732,15 @@ public class ConfigModelV7 extends ConfigModel {
             return name;
         }
 
+    }
+
+    public static class ResourcePermission {
+        private final String resourceType;
+        private final Set<String> permmittedResourceIds;
+        public ResourcePermission(final String resourceType, final List<String> resourceIds) {
+            this.resourceType = resourceType;
+            this.permmittedResourceIds = new HashSet<>(resourceIds); 
+        }
     }
 
     // sg roles

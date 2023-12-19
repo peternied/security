@@ -542,6 +542,12 @@ public class ConfigModelV6 extends ConfigModel {
             roles.stream().forEach(p -> ipatterns.addAll(p.getIpatterns()));
             return ConfigModelV6.impliesTypePerm(ipatterns, resolved, user, actions, resolver, cs);
         }
+
+        @Override
+        public boolean hasResourcePermission(String resourceType, String resourceId) {
+            /** Not supported */
+            return false;
+        }
     }
 
     public static class SecurityRole {

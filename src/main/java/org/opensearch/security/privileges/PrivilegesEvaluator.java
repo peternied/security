@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -68,6 +69,7 @@ import org.opensearch.action.search.MultiSearchAction;
 import org.opensearch.action.search.SearchAction;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchScrollAction;
+import org.opensearch.action.search.ViewSearchRequest;
 import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.termvectors.MultiTermVectorsAction;
 import org.opensearch.action.update.UpdateAction;
@@ -276,6 +278,37 @@ public class PrivilegesEvaluator {
             log.debug("Evaluate permissions for {} on {}", user, clusterService.localNode().getName());
             log.debug("Action: {} ({})", action0, request.getClass().getSimpleName());
             log.debug("Mapped roles: {}", mappedRoles.toString());
+        }
+
+        if (request instanceof org.opensearch.action.ResourceRequest) {
+
+            final var resourceRequest = (org.opensearch.action.ResourceRequest) request;
+            final var resources = resourceRequest.getResourceTypeAndIds();
+
+            final var deniedResources = resources
+                .entrySet()
+                .stream()
+                .filter(entry -> !securityRoles.hasResourcePermission(entry.getKey(), entry.getValue()))
+                .map(entry -> "resource type: " + entry.getKey() + ", id: " + entry.getValue())
+                .collect(Collectors.toList());
+
+
+            if (!deniedResources.isEmpty()) {
+                presponse.missingPrivileges.addAll(deniedResources);
+                presponse.allowed = false;
+                log.info(
+                    "No perm match for {} [Action [{}]] [RolesChecked {}]. No permissions for {}",
+                    user,
+                    action0,
+                    securityRoles.getRoleNames(),
+                    presponse.missingPrivileges
+                );                
+            } else {
+                presponse.allowed = true;
+            }
+
+            log.debug("ViewSearchRequests are authorized at the rest layer");
+            return presponse;
         }
 
         if (request instanceof BulkRequest && (Strings.isNullOrEmpty(user.getRequestedTenant()))) {

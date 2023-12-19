@@ -51,6 +51,7 @@ public class RoleV7 implements Hideable, StaticDefinable {
     private List<String> cluster_permissions = Collections.emptyList();
     private List<Index> index_permissions = Collections.emptyList();
     private List<Tenant> tenant_permissions = Collections.emptyList();
+    private List<ResourcePermission> resource_permissions = Collections.emptyList();
 
     public RoleV7() {
 
@@ -225,6 +226,22 @@ public class RoleV7 implements Hideable, StaticDefinable {
 
     }
 
+    public static class ResourcePermission {
+        private String resourceType;
+        private List<String> resource_ids = Collections.emptyList();
+
+        public ResourcePermission() {
+        }
+
+        public List<String> getResource_ids() {
+            return resource_ids;
+        }
+
+        public void setResource_ids(List<String> resource_ids) {
+            this.resource_ids = resource_ids;
+        }
+    }
+
     public boolean isHidden() {
         return hidden;
     }
@@ -299,6 +316,8 @@ public class RoleV7 implements Hideable, StaticDefinable {
             + index_permissions
             + ", tenant_permissions="
             + tenant_permissions
+            + ", resource_permissions="
+            + resource_permissions
             + "]";
     }
 

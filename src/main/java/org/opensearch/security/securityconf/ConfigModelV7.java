@@ -216,6 +216,7 @@ public class ConfigModelV7 extends ConfigModel {
 
                     final Set<String> permittedClusterActions = agr.resolvedActions(securityRole.getValue().getCluster_permissions());
                     _securityRole.addClusterPerms(permittedClusterActions);
+                    _securityRole.addResourcePermissions(null)
 
                     /*for(RoleV7.Tenant tenant: securityRole.getValue().getTenant_permissions()) {
 
@@ -566,7 +567,7 @@ public class ConfigModelV7 extends ConfigModel {
 
         @Override
         public boolean hasResourcePermission(final String resourceType, final String resourceId) {
-            for (SecurityRole role : roles) {
+            for (final SecurityRole role : roles) {
                 final ResourcePermission resourcePermission = role.resourcePermissions.get(resourceType);
                 if (resourcePermission != null && resourcePermission.permmittedResourceIds.contains(resourceId)) {
                     return true;
@@ -586,6 +587,7 @@ public class ConfigModelV7 extends ConfigModel {
             private final String name;
             private final Set<String> clusterPerms = new HashSet<>();
             private final Set<IndexPattern> ipatterns = new HashSet<>();
+            private final Set<ResourcePermission> resourcePermissions = new HashSet<>(); 
 
             public Builder(String name) {
                 this.name = Objects.requireNonNull(name);
@@ -603,16 +605,24 @@ public class ConfigModelV7 extends ConfigModel {
                 return this;
             }
 
+            public Builder addResourcePermissions(final Set<ResourcePermission> resourcePermissions) {
+                if (resourcePermissions != null) {
+                    this.resourcePermissions.addAll(resourcePermissions);
+                }
+                return this;
+            }
+
             public SecurityRole build() {
-                return new SecurityRole(name, ipatterns, WildcardMatcher.from(clusterPerms));
+                var resourcePermissionMap = this.resourcePermissions.stream().collect(Collectors.toMap(ResourcePermission::getResourceType, Function.identity()));
+                return new SecurityRole(name, ipatterns, WildcardMatcher.from(clusterPerms), resourcePermissionMap);
             }
         }
 
-        private SecurityRole(String name, Set<IndexPattern> ipatterns, WildcardMatcher clusterPerms) {
+        private SecurityRole(String name, Set<IndexPattern> ipatterns, WildcardMatcher clusterPerms, Map<String, ResourcePermission> resourcePermission) {
             this.name = Objects.requireNonNull(name);
             this.ipatterns = ipatterns;
             this.clusterPerms = clusterPerms;
-            this.resourcePermissions = new HashMap<String, ResourcePermission>();
+            this.resourcePermissions = resourcePermission;
         }
 
         private boolean impliesClusterPermission(String action) {
@@ -740,6 +750,14 @@ public class ConfigModelV7 extends ConfigModel {
         public ResourcePermission(final String resourceType, final List<String> resourceIds) {
             this.resourceType = resourceType;
             this.permmittedResourceIds = new HashSet<>(resourceIds); 
+        }
+
+        public String getResourceType() {
+            return resourceType;
+        }
+
+        public Set<String> getPermittedResourceIds() {
+            return permmittedResourceIds;
         }
     }
 

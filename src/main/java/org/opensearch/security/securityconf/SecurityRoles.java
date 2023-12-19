@@ -97,5 +97,5 @@ public interface SecurityRoles {
 
     SecurityRoles filter(Set<String> roles);
 
-    boolean hasResourcePermission(final String resourceType, final String resourceId)
+    boolean hasResourcePermission(final String resourceType, final String resourceId);
 }

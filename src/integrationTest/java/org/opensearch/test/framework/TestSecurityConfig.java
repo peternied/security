@@ -342,6 +342,7 @@ public class TestSecurityConfig {
         private List<String> clusterPermissions = new ArrayList<>();
 
         private List<IndexPermission> indexPermissions = new ArrayList<>();
+        private List<String, User> resourcePermissions;
 
         public Role(String name) {
             this.name = name;
@@ -382,6 +383,10 @@ public class TestSecurityConfig {
 
             if (!indexPermissions.isEmpty()) {
                 xContentBuilder.field("index_permissions", indexPermissions);
+            }
+
+            if (!resourcePermissions.isEmpty()) {
+                xContentBuilder.field("resource_permissions", resourcePermissions);
             }
 
             xContentBuilder.endObject();

@@ -20,6 +20,9 @@ all_access:
         - "*"
       allowed_actions:
         - "kibana_all_write"
+  resource_permissions:
+    - resource_type: "*"
+      resource_ids: ["*"]
 
 kibana_user:
   reserved: true

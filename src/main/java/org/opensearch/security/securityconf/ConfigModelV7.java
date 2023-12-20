@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -216,7 +217,14 @@ public class ConfigModelV7 extends ConfigModel {
 
                     final Set<String> permittedClusterActions = agr.resolvedActions(securityRole.getValue().getCluster_permissions());
                     _securityRole.addClusterPerms(permittedClusterActions);
-                    _securityRole.addResourcePermissions(null)
+
+                    final Set<ResourcePermission> resourcePermissions = new HashSet<>();
+                    for (final RoleV7.ResourcePermission rp : securityRole.getValue().getResource_permissions()) {
+                        final String resourceType = rp.getResource_type();
+                        final List<String> resourceIds = rp.getResource_ids();
+                        resourcePermissions.add(new ResourcePermission(resourceType, resourceIds));
+                    }
+                    _securityRole.addResourcePermissions(resourcePermissions);
 
                     /*for(RoleV7.Tenant tenant: securityRole.getValue().getTenant_permissions()) {
 
@@ -568,8 +576,9 @@ public class ConfigModelV7 extends ConfigModel {
         @Override
         public boolean hasResourcePermission(final String resourceType, final String resourceId) {
             for (final SecurityRole role : roles) {
-                final ResourcePermission resourcePermission = role.resourcePermissions.get(resourceType);
-                if (resourcePermission != null && resourcePermission.permmittedResourceIds.contains(resourceId)) {
+                final ResourcePermission resourcePermission = Optional.ofNullable(role.resourcePermissions.get(resourceType))
+                    .orElseGet(() -> role.resourcePermissions.get("*"));
+                if (resourcePermission != null && (resourcePermission.permmittedResourceIds.contains(resourceId) || resourcePermission.permmittedResourceIds.contains("*"))) {
                     return true;
                 }
             }
@@ -726,7 +735,10 @@ public class ConfigModelV7 extends ConfigModel {
                 + ipatterns
                 + System.lineSeparator()
                 + "    clusterPerms="
-                + clusterPerms;
+                + clusterPerms
+                + System.lineSeparator()
+                + "    resourcePermissions="
+                + resourcePermissions;
         }
 
         // public Set<Tenant> getTenants(User user) {
@@ -758,6 +770,16 @@ public class ConfigModelV7 extends ConfigModel {
 
         public Set<String> getPermittedResourceIds() {
             return permmittedResourceIds;
+        }
+
+        @Override
+        public String toString() {
+            return System.lineSeparator()
+                + "        resourceType="
+                + resourceType
+                + System.lineSeparator()
+                + "        permmittedResourceIds="
+                + permmittedResourceIds;
         }
     }
 

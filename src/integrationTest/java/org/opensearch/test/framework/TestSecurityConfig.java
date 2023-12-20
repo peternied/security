@@ -336,13 +336,13 @@ public class TestSecurityConfig {
     }
 
     public static class Role implements ToXContentObject {
-        public static Role ALL_ACCESS = new Role("all_access").clusterPermissions("*").indexPermissions("*").on("*");
+        public static Role ALL_ACCESS = new Role("all_access").clusterPermissions("*").indexPermissions("*").on("*").resourcePermissions("*", "*");
 
         private String name;
         private List<String> clusterPermissions = new ArrayList<>();
 
         private List<IndexPermission> indexPermissions = new ArrayList<>();
-        private List<String, User> resourcePermissions;
+        private List<ResourcePermission> resourcePermissions = new ArrayList<>();
 
         public Role(String name) {
             this.name = name;
@@ -355,6 +355,11 @@ public class TestSecurityConfig {
 
         public IndexPermission indexPermissions(String... indexPermissions) {
             return new IndexPermission(this, indexPermissions);
+        }
+
+        public Role resourcePermissions(final String resourceType, final String... resourceIds) {
+            resourcePermissions.add(new ResourcePermission(resourceType).resourceIds(resourceIds));
+            return this;
         }
 
         public Role name(String name) {
@@ -370,6 +375,7 @@ public class TestSecurityConfig {
             Role role = new Role(this.name);
             role.clusterPermissions.addAll(this.clusterPermissions);
             role.indexPermissions.addAll(this.indexPermissions);
+            role.resourcePermissions.addAll(this.resourcePermissions);
             return role;
         }
 
@@ -452,6 +458,31 @@ public class TestSecurityConfig {
             if (maskedFields != null) {
                 xContentBuilder.field("masked_fields", maskedFields);
             }
+
+            xContentBuilder.endObject();
+            return xContentBuilder;
+        }
+    }
+
+    public static class ResourcePermission implements ToXContentObject {
+        private String resourceType;
+        private List<String> resourceIds;
+
+        ResourcePermission(final String resourceType) {
+            this.resourceType = resourceType;
+        }
+
+        public ResourcePermission resourceIds(final String... resourceIds) {
+            this.resourceIds = Arrays.asList(resourceIds);
+            return this;
+        }
+
+        @Override
+        public XContentBuilder toXContent(final XContentBuilder xContentBuilder, final Params params) throws IOException {
+            xContentBuilder.startObject();
+
+            xContentBuilder.field("resource_type", resourceType);
+            xContentBuilder.field("resource_ids", resourceIds);
 
             xContentBuilder.endObject();
             return xContentBuilder;

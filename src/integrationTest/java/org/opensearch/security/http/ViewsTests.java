@@ -35,7 +35,7 @@ import static org.opensearch.test.framework.TestSecurityConfig.Role.ALL_ACCESS;
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 public class ViewsTests {
     private static final TestSecurityConfig.User ADMIN_USER = new TestSecurityConfig.User("admin").backendRoles("admin");
-    private static final TestSecurityConfig.User VIEW_USER = new TestSecurityConfig.User("view_user").roles(new TestSecurityConfig.Role("see views").clusterPermissions("cluster:views:search"));
+    private static final TestSecurityConfig.User VIEW_USER = new TestSecurityConfig.User("view_user").roles(new TestSecurityConfig.Role("see views").clusterPermissions("cluster:views:search").resourcePermissions("view_id", "songs"));
 
     @ClassRule
     public static LocalCluster cluster = new LocalCluster.Builder().singleNode()
@@ -48,9 +48,7 @@ public class ViewsTests {
     public static void createTestData() {
         try (final Client client = cluster.getInternalNodeClient()) {
             final var doc1 = client.prepareIndex("songs-2022").setRefreshPolicy(IMMEDIATE).setSource(SONGS[0].asMap()).get();
-            System.err.println("Created doc1:\r\n" + doc1);
             final var doc2 = client.prepareIndex("songs-2023").setRefreshPolicy(IMMEDIATE).setSource(SONGS[1].asMap()).get();
-            System.err.println("Created doc2:\r\n" + doc2);
         }
     }
 
@@ -66,10 +64,8 @@ public class ViewsTests {
 
             final HttpResponse createView = adminClient.postJson("views", createViewBody());
             createView.assertStatusCode(SC_CREATED);
-            System.err.println("View created:\r\n" + createView.getBody());
 
             final HttpResponse search = adminClient.postJson("songs-*/_search", createQueryString());
-            System.err.println("Search result:\r\n" + search.getBody());
 
             final HttpResponse searchView = adminClient.postJson("views/songs/_search", createQueryString());
             assertThat("Search response was:\r\n" + searchView.getBody(), searchView.getIntFromJsonBody("/hits/total/value"), equalTo(2));

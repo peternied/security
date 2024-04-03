@@ -156,8 +156,10 @@ public abstract class AbstractSystemIndicesTests extends SingleClusterTest {
     }
 
     void validateSearchResponse(RestHelper.HttpResponse response, int expectedHits) throws IOException {
+        System.err.println("\t\tResponse status code was " + response.getStatusCode());
         assertEquals(RestStatus.OK.getStatus(), response.getStatusCode());
 
+        System.err.println("\t\tResponse body:\n\t\t" + response.getBody());
         XContentParser xcp = XContentType.JSON.xContent()
             .createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE, response.getBody());
         SearchResponse searchResponse = SearchResponse.fromXContent(xcp);

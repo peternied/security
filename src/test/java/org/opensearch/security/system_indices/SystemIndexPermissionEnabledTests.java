@@ -74,11 +74,14 @@ public class SystemIndexPermissionEnabledTests extends AbstractSystemIndicesTest
 
         // search system indices
         for (String index : SYSTEM_INDICES) {
+            System.err.println("Testing index " + index);
             // security index is only accessible by super-admin
             RestHelper.HttpResponse response = restHelper.executePostRequest(index + "/_search", "", normalUserHeader);
             if (index.equals(ACCESSIBLE_ONLY_BY_SUPER_ADMIN) || index.equals(SYSTEM_INDEX_WITH_NO_ASSOCIATED_ROLE_PERMISSIONS)) {
+                System.err.println("\tExpecting forbidden response for " + index);
                 validateForbiddenResponse(response, "", normalUser);
             } else {
+                System.err.println("\tExpecting success response for " + index);
                 validateSearchResponse(response, 0);
             }
         }
